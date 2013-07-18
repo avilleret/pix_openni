@@ -415,8 +415,8 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 	// init status variables
 	
 	m_player = false;
-    m_recorder = false;
-    
+        m_recorder = false;
+
 	depth_wanted = false;
 	depth_started= false; 
 	rgb_wanted = false;
@@ -497,7 +497,6 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 /////////////////////////////////////////////////////////
 pix_openni :: ~pix_openni()
 { 
-	
 	g_context.StopGeneratingAll();
 	
 	if (depth_started)
@@ -515,7 +514,6 @@ pix_openni :: ~pix_openni()
 		g_UserGenerator.Release();
 	}
 	
-
 	g_context.Release();
     g_Device.Release();
     
@@ -551,8 +549,11 @@ bool pix_openni :: Init()
         nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
         //XN_IS_STATUS_OK(nRetVal);
         
+        int i=0;
+        for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i);
+        
         post("The following devices were found:");
-        int i = 1;
+        i = 1;
         for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
         {
             NodeInfo deviceNodeInfo = *it;
@@ -1328,7 +1329,14 @@ void pix_openni :: bangMess ()
     //XN_IS_STATUS_OK(nRetVal);
     
     post("The following devices were found:");
-    int i = 1;
+    int i = 0;
+    for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i){}
+    
+    t_atom devices;
+    SETFLOAT(&devices, i);
+    outlet_anything(m_dataout, gensym("devices"), 1, &devices);
+    
+    i = 1;
     for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
     {
         NodeInfo deviceNodeInfo = *it;
@@ -1353,6 +1361,11 @@ void pix_openni :: bangMess ()
             nLength = nStringBufferSize;
             deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
             post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
+            t_atom device[3];
+            SETFLOAT(device, i);
+            SETSYMBOL(device+1, gensym(strSerialNumber));
+            SETSYMBOL(device+2, gensym(strDeviceName));
+            outlet_anything(m_dataout, gensym("device"), 3, device);
         }
         else
         {
@@ -1437,6 +1450,8 @@ void pix_openni :: obj_setupCallback(t_class *classPtr)
   		  gensym("depth_mode"), A_GIMME, A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::bangMessCallback,
   		  gensym("bang"), A_NULL);
+  class_addmethod(classPtr, (t_method)&pix_openni::bangMessCallback,
+  		  gensym("enumerate"), A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::floatRgbMessCallback,
   		  gensym("rgb"), A_FLOAT, A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::floatDepthMessCallback,
@@ -1502,6 +1517,11 @@ void pix_openni :: DepthModeMessCallback(void *data, t_symbol*s, int argc, t_ato
 }
 
 void pix_openni :: bangMessCallback(void *data)
+{
+  GetMyClass(data)->bangMess();
+}
+
+void pix_openni :: enumerateMessCallback(void *data)
 {
   GetMyClass(data)->bangMess();
 }
