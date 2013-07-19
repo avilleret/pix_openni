@@ -1,4 +1,4 @@
-#N canvas 550 157 843 515 10;
+#N canvas 536 199 843 515 10;
 #X obj 109 120 gemhead;
 #X obj 247 64 gemwin;
 #X msg 247 22 dimen 640 480 \, create \, 1;
@@ -437,7 +437,7 @@
 #X connect 18 0 19 0;
 #X connect 19 0 0 0;
 #X restore -26 88 pd RECORD;
-#N canvas 370 261 1012 557 PROPERTIES 0;
+#N canvas 897 377 1012 557 PROPERTIES 1;
 #X text 29 17 properties for pix_openni;
 #X obj 54 54 cnv 15 300 150 empty empty empty 20 12 0 14 -232576 -66577
 0;
@@ -635,6 +635,12 @@ activated!;
 #X obj 391 174 spigot;
 #X obj 423 156 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
+#X msg 163 111 device \$1;
+#X obj 320 147 print;
+#X msg 163 88 symbol 0x41ede646;
+#X floatatom 281 88 5 0 0 0 - - -;
+#X msg 140 71 symbol 0x41ede647;
+#X msg 336 100 close_device;
 #X connect 0 0 49 0;
 #X connect 2 0 1 0;
 #X connect 3 0 1 0;
@@ -665,3 +671,8 @@ activated!;
 #X connect 49 2 51 0;
 #X connect 51 0 50 0;
 #X connect 52 0 51 1;
+#X connect 53 0 49 0;
+#X connect 55 0 53 0;
+#X connect 56 0 53 0;
+#X connect 57 0 53 0;
+#X connect 58 0 49 0;
