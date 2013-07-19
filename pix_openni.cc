@@ -548,49 +548,49 @@ bool pix_openni :: Init()
         nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
         //XN_IS_STATUS_OK(nRetVal);
         
-        //~int i=0;
-        //~for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i);
-        
-        //~post("The following devices were found:");
-        //~i = 1;
-        //~for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
-        //~{
-            //~NodeInfo deviceNodeInfo = *it;
-            //~
-            //~Device deviceNode;
-            //~deviceNodeInfo.GetInstance(deviceNode);
-            //~XnBool bExists = deviceNode.IsValid();
-            //~if (!bExists)
-            //~{
-                //~g_context.CreateProductionTree(deviceNodeInfo, deviceNode);
-                //~// this might fail.
-            //~}
-            //~
-            //~if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_m_device_idENTIFICATION))
-            //~{
-                //~const XnUInt32 nStringBufferSize = 200;
-                //~XnChar strDeviceName[nStringBufferSize];
-                //~XnChar strSerialNumber[nStringBufferSize];
-                //~
-                //~XnUInt32 nLength = nStringBufferSize;
-                //~deviceNode.GetIdentificationCap().GetDeviceName(strDeviceName, nLength);
-                //~nLength = nStringBufferSize;
-                //~deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
-                //~unsigned int lSerial = atoi(strSerialNumber);
-                //~sprintf(strSerialNumber, "%08x", lSerial);
-                //~post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
-            //~}
-            //~else
-            //~{
-                //~post("[%d] %s", i, deviceNodeInfo.GetCreationInfo());
-            //~}
-            //~
-            //~// release the device if we created it
-            //~if (!bExists && deviceNode.IsValid())
-            //~{
-                //~deviceNode.Release();
-            //~}
-        //~}
+        int i=0;
+        for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i);
+        //~
+        post("The following devices were found:");
+        i = 1;
+        for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
+        {
+            NodeInfo deviceNodeInfo = *it;
+            
+            Device deviceNode;
+            deviceNodeInfo.GetInstance(deviceNode);
+            XnBool bExists = deviceNode.IsValid();
+            if (!bExists)
+            {
+                g_context.CreateProductionTree(deviceNodeInfo, deviceNode);
+                // this might fail.
+            }
+            
+            if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION))
+            {
+                const XnUInt32 nStringBufferSize = 200;
+                XnChar strDeviceName[nStringBufferSize];
+                XnChar strSerialNumber[nStringBufferSize];
+                
+                XnUInt32 nLength = nStringBufferSize;
+                deviceNode.GetIdentificationCap().GetDeviceName(strDeviceName, nLength);
+                nLength = nStringBufferSize;
+                deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
+                unsigned int lSerial = atoi(strSerialNumber);
+                sprintf(strSerialNumber, "%08x", lSerial);
+                post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
+            }
+            else
+            {
+                post("[%d] %s", i, deviceNodeInfo.GetCreationInfo());
+            }
+            
+            // release the device if we created it
+            if (!bExists && deviceNode.IsValid())
+            {
+                deviceNode.Release();
+            }
+        }
         
         // select device
         
@@ -1367,7 +1367,7 @@ void pix_openni :: bangMess ()
             sprintf(strSerialNumber, "%08x", lSerial);
             SETSYMBOL(device+1, gensym(strSerialNumber));
             SETSYMBOL(device+2, gensym(strDeviceName));
-            outlet_anything(m_dataout, gensym("device"), 3, device);
+            outlet_anything(m_dataout, gensym("device"), 1, device);
             post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
 
         }
