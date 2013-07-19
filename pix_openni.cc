@@ -1367,12 +1367,13 @@ void pix_openni :: bangMess ()
             sprintf(strSerialNumber, "%08x", lSerial);
             SETSYMBOL(device+1, gensym(strSerialNumber));
             SETSYMBOL(device+2, gensym(strDeviceName));
-            outlet_anything(m_dataout, gensym("device"), 1, device);
+            outlet_anything(m_dataout, gensym("device"), 3, device);
             post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
 
         }
         else
         {
+            error("found some device that can't be opened, is it enough USB power ?"); // Asus Xtion with not enough power is detected but can't be initialize
             post("[%d] %s", i, deviceNodeInfo.GetCreationInfo());
         }
         
