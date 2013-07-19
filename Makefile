@@ -1,20 +1,19 @@
 # change to your local directories!
-PD_APP_DIR = /Applications/Pd-extended.app/Contents/Resources
-GEM_DIR = /Users/matthias/Gem-0.93.1
-
-CPPFLAGS = -I$(GEM_DIR)/src -I$(PD_APP_DIR)/include
+PD_APP_DIR =  /home/antoine/pd/pd
+GEM_DIR = /home/antoine/pd/Gem
 
 #linux doesnt work yet
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Linux)
- CPPFLAGS += -I/usr/include/ni
- CXXFLAGS = -g -O2 -fPIC -freg-struct-return -Os -falign-loops=32 -falign-functions=32 -falign-jumps=32 -funroll-loops -ffast-math -mmmx -fpascal-strings 
+ CPPFLAGS = -I/usr/include/ni `pkg-config --cflags pd` `pkg-config --cflags Gem`
+ CXXFLAGS = -g -O2 -fPIC -freg-struct-return -Os -falign-loops=32 -falign-functions=32 -falign-jumps=32 -funroll-loops -ffast-math -mmmx
  LDFLAGS = -shared -rdynamic
  LIBS = -lOpenNI
  EXTENSION = pd_linux
  USER_EXTERNALS=$(HOME)/pd-externals
 endif
 ifeq ($(UNAME),Darwin)
+ CPPFLAGS = -I$(GEM_DIR)/src -I$(PD_APP_DIR)/include
  CPPFLAGS += -I/sw/include/ni
  CXXFLAGS = -g -fast -msse3 -arch i386
  LDFLAGS = -arch i386 -bundle -bundle_loader $(PD_APP_DIR)/bin/pd -undefined dynamic_lookup -mmacosx-version-min=10.6 -L/sw/lib
