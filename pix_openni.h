@@ -22,7 +22,7 @@ LOG
 #include <stdlib.h>
 #include <string.h>
 //#include <assert.h>
-//#include <iostream>
+#include <iomanip>
 //#include <cmath>
 #include <vector>
 #include <stdint.h>
@@ -92,7 +92,7 @@ class GEM_EXTERN pix_openni : public GemBase
     HandsGenerator g_HandsGenerator;
     GestureGenerator gestureGenerator;
     
-    int device_id;
+    int m_device_id;
     
     protected:
     	
@@ -116,7 +116,9 @@ class GEM_EXTERN pix_openni : public GemBase
     	void				VideoModeMess(int argc, t_atom*argv);
 			void				DepthModeMess(int argc, t_atom*argv);
     	void	    	bangMess();
-    	
+      void        deviceMess(int id);
+      void        deviceSerialMess(t_symbol serial);
+      void        closeDeviceMess();
 			void				renderDepth(int argc, t_atom*argv);
 			
 			
@@ -185,6 +187,8 @@ class GEM_EXTERN pix_openni : public GemBase
 			static void			DepthModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
     	static void    	bangMessCallback(void *data);
     	static void    	enumerateMessCallback(void *data);
+      static void     deviceMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
+      static void     closeDeviceMessCallback(void *data);
     	
 			static void    	openMessCallback(void *data, std::string filename);
 			static void    	floatPlayMessCallback(void *data, float value);

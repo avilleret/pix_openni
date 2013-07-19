@@ -448,13 +448,13 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 	m_skeleton_smoothing=0.5;
 	m_hand_smoothing=0.5;
 	
-    device_id = 1;
+    m_device_id = 1;
     
 	// CHECK FOR ARGS AND ACTIVATE STREAMS
 	if (argc >= 1)
 	{
 		post("chosen Kinect Nr: %d", atom_getint(&argv[0]));
-        device_id = atom_getint(&argv[0]);
+        m_device_id = atom_getint(&argv[0]);
 	}
 	if (argc >= 2)
 	{
@@ -513,10 +513,9 @@ pix_openni :: ~pix_openni()
 	{
 		g_UserGenerator.Release();
 	}
-	
-	g_context.Release();
-    g_Device.Release();
-    
+        
+   g_Device.Release();
+	g_context.Release();   
 }
 
 /////////////////////////////////////////////////////////
@@ -531,7 +530,7 @@ bool pix_openni :: Init()
     //// INIT IN CODE::
     
     //Context context;
-    rc = g_context.Init(); // key difference: Init() not InitFromXml()
+    if ( !openni_ready ) rc = g_context.Init(); // key difference: Init() not InitFromXml()
     if (rc != XN_STATUS_OK)
     {
         post("OPEN NI init() failed.");
@@ -540,7 +539,7 @@ bool pix_openni :: Init()
         openni_ready = true;
     }
 	
-    if (openni_ready)
+    if ( openni_ready )
     {
         EnumerationErrors errors;
         XnStatus nRetVal;  // ERROR STATUS
@@ -549,47 +548,49 @@ bool pix_openni :: Init()
         nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
         //XN_IS_STATUS_OK(nRetVal);
         
-        int i=0;
-        for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i);
+        //~int i=0;
+        //~for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i);
         
-        post("The following devices were found:");
-        i = 1;
-        for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
-        {
-            NodeInfo deviceNodeInfo = *it;
-            
-            Device deviceNode;
-            deviceNodeInfo.GetInstance(deviceNode);
-            XnBool bExists = deviceNode.IsValid();
-            if (!bExists)
-            {
-                g_context.CreateProductionTree(deviceNodeInfo, deviceNode);
-                // this might fail.
-            }
-            
-            if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION))
-            {
-                const XnUInt32 nStringBufferSize = 200;
-                XnChar strDeviceName[nStringBufferSize];
-                XnChar strSerialNumber[nStringBufferSize];
-                
-                XnUInt32 nLength = nStringBufferSize;
-                deviceNode.GetIdentificationCap().GetDeviceName(strDeviceName, nLength);
-                nLength = nStringBufferSize;
-                deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
-                post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
-            }
-            else
-            {
-                post("[%d] %s", i, deviceNodeInfo.GetCreationInfo());
-            }
-            
-            // release the device if we created it
-            if (!bExists && deviceNode.IsValid())
-            {
-                deviceNode.Release();
-            }
-        }
+        //~post("The following devices were found:");
+        //~i = 1;
+        //~for (NodeInfoList::Iterator it = list.Begin(); it != list.End(); ++it, ++i)
+        //~{
+            //~NodeInfo deviceNodeInfo = *it;
+            //~
+            //~Device deviceNode;
+            //~deviceNodeInfo.GetInstance(deviceNode);
+            //~XnBool bExists = deviceNode.IsValid();
+            //~if (!bExists)
+            //~{
+                //~g_context.CreateProductionTree(deviceNodeInfo, deviceNode);
+                //~// this might fail.
+            //~}
+            //~
+            //~if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_m_device_idENTIFICATION))
+            //~{
+                //~const XnUInt32 nStringBufferSize = 200;
+                //~XnChar strDeviceName[nStringBufferSize];
+                //~XnChar strSerialNumber[nStringBufferSize];
+                //~
+                //~XnUInt32 nLength = nStringBufferSize;
+                //~deviceNode.GetIdentificationCap().GetDeviceName(strDeviceName, nLength);
+                //~nLength = nStringBufferSize;
+                //~deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
+                //~unsigned int lSerial = atoi(strSerialNumber);
+                //~sprintf(strSerialNumber, "%08x", lSerial);
+                //~post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
+            //~}
+            //~else
+            //~{
+                //~post("[%d] %s", i, deviceNodeInfo.GetCreationInfo());
+            //~}
+            //~
+            //~// release the device if we created it
+            //~if (!bExists && deviceNode.IsValid())
+            //~{
+                //~deviceNode.Release();
+            //~}
+        //~}
         
         // select device
         
@@ -601,11 +602,11 @@ bool pix_openni :: Init()
             //throw(GemException("Init() failed\n"));
             return false;
         }
-            for (i = 1; i < device_id; ++i)
+            for ( int i = 1; i < m_device_id; ++i)
             {
                 it++;
                 if (it == list.End()) {
-                    post("ERROR: Kinect Device ID not valid: %i", device_id);
+                    post("ERROR: Kinect Device ID not valid: %i", m_device_id);
                     openni_ready = false;
                     return false;
                 }
@@ -614,7 +615,7 @@ bool pix_openni :: Init()
             NodeInfo deviceNode = *it;
             rc = g_context.CreateProductionTree(deviceNode, g_Device);
             return true;
-    }
+         }
 }
 
 /////////////////////////////////////////////////////////
@@ -1360,12 +1361,15 @@ void pix_openni :: bangMess ()
             deviceNode.GetIdentificationCap().GetDeviceName(strDeviceName, nLength);
             nLength = nStringBufferSize;
             deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, nLength);
-            post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
             t_atom device[3];
             SETFLOAT(device, i);
+            unsigned int lSerial = atoi(strSerialNumber);
+            sprintf(strSerialNumber, "%08x", lSerial);
             SETSYMBOL(device+1, gensym(strSerialNumber));
             SETSYMBOL(device+2, gensym(strDeviceName));
             outlet_anything(m_dataout, gensym("device"), 3, device);
+            post("[%d] %s (%s)", i, strDeviceName, strSerialNumber);
+
         }
         else
         {
@@ -1399,7 +1403,7 @@ void pix_openni :: bangMess ()
         
         g_Device.GetIdentificationCap().GetDeviceName(strDeviceName,nStringBufferSize);
         
-		post ("Opened Device: [%i] %s", device_id, strDeviceName);
+		post ("Opened Device: [%i] %s", m_device_id, strDeviceName);
 
 	}
 
@@ -1438,6 +1442,91 @@ void pix_openni :: bangMess ()
 	}
 }
 
+void pix_openni :: deviceMess(int id)
+{
+        EnumerationErrors errors;
+        NodeInfoList list;
+        g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
+        
+        int i = 1;
+        NodeInfoList::Iterator it = list.Begin() ;
+        for (; it != list.End() ; it++, ++i){
+          if ( i == int(id) ) break;
+        }
+        
+        if ( it == list.End() )
+        {
+                error("can't find device with id %d", int(id));
+        } else {
+           m_device_id = i;
+           closeDeviceMess();
+           if ( !Init() ){
+              error("could not initialize device with id %d", int(id));
+           }
+        }
+}
+
+void pix_openni :: deviceSerialMess(t_symbol serial)
+{
+        EnumerationErrors errors;
+        XnStatus nRetVal;  // ERROR STATUS
+        NodeInfoList list;
+        nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
+        
+        unsigned int lSerial = strtol(serial.s_name, NULL, 16);
+
+        post("serial %s = %d", serial.s_name, lSerial);
+        
+        int i = 1;
+        
+        NodeInfoList::Iterator it = list.Begin() ;
+        Device deviceNode;
+        XnBool bExists;
+        
+        for ( ; it != list.End() ; it++, ++i)
+        {
+                NodeInfo deviceNodeInfo = *it;
+                
+                deviceNodeInfo.GetInstance(deviceNode);
+                bExists = deviceNode.IsValid();
+                if (!bExists)
+                {
+                    g_context.CreateProductionTree(deviceNodeInfo, deviceNode);
+                    // this might fail.
+                }
+                
+                if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION))
+                {
+                    XnChar strSerialNumber[256];
+                    deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, 256);
+                    unsigned int intSerialNumber = atoi(strSerialNumber);
+                    
+                    if ( lSerial == intSerialNumber ) {
+                       
+                       if (!bExists && deviceNode.IsValid()) {
+                           g_Device.Release();
+                           g_Device=deviceNode;
+                        } else {
+                           error("could not open device with serial %s (already in use ?)", serial.s_name);
+                           break;
+                       }
+                    }
+                 }
+        }
+              
+        if ( it == list.End() ){
+                error("could not find device with serial %s", serial.s_name);
+        }
+}
+
+void pix_openni :: closeDeviceMess(){
+   post("close device");
+   g_context.StopGeneratingAll();
+   g_Device.Release();
+   g_context.Release();
+   openni_ready = false;
+}
+
 /////////////////////////////////////////////////////////
 // static member function
 //
@@ -1452,6 +1541,10 @@ void pix_openni :: obj_setupCallback(t_class *classPtr)
   		  gensym("bang"), A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::bangMessCallback,
   		  gensym("enumerate"), A_NULL);
+  class_addmethod(classPtr, (t_method)&pix_openni::deviceMessCallback,
+  		  gensym("device"), A_GIMME, A_NULL);
+  class_addmethod(classPtr, (t_method)&pix_openni::closeDeviceMessCallback,
+  		  gensym("close_device"), A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::floatRgbMessCallback,
   		  gensym("rgb"), A_FLOAT, A_NULL);
   class_addmethod(classPtr, (t_method)&pix_openni::floatDepthMessCallback,
@@ -1519,6 +1612,24 @@ void pix_openni :: DepthModeMessCallback(void *data, t_symbol*s, int argc, t_ato
 void pix_openni :: bangMessCallback(void *data)
 {
   GetMyClass(data)->bangMess();
+}
+
+void pix_openni :: deviceMessCallback(void *data, t_symbol*s, int argc, t_atom*argv)
+{
+   if ( argc > 0 ){
+      if ( argv[0].a_type == A_FLOAT )
+      {
+         int id = atom_getint(argv);
+         GetMyClass(data)->deviceMess(id);
+      } else if ( argv[0].a_type == A_SYMBOL ) {
+         t_symbol serial = *atom_getsymbol(argv);
+         GetMyClass(data)->deviceSerialMess(serial);
+      }
+   }
+}
+
+void pix_openni :: closeDeviceMessCallback(void *data){
+   GetMyClass(data)->closeDeviceMess();
 }
 
 void pix_openni :: enumerateMessCallback(void *data)
