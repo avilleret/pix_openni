@@ -1044,6 +1044,8 @@ void pix_openni :: renderDepth(int argc, t_atom*argv)
                 
             }
         }
+    } else {
+            outlet_anything(m_depthoutlet, gensym("gem_state"), argc, argv); // if we don't get a gemstate pointer, we forward all to other objects...
     }
 }
 
