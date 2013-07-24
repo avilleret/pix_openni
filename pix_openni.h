@@ -116,6 +116,7 @@ class GEM_EXTERN pix_openni : public GemBase
     	void				VideoModeMess(int argc, t_atom*argv);
 			void				DepthModeMess(int argc, t_atom*argv);
     	void	    	bangMess();
+    	void	    	enumerateMess();
       void        deviceMess(int id);
       void        deviceSerialMess(t_symbol serial);
       void        closeDeviceMess();
