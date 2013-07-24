@@ -74,6 +74,8 @@ class GEM_EXTERN pix_openni : public GemBase
 			bool m_real_world_coords;
 			bool m_output_euler;
 			bool m_auto_calibration;
+      bool m_verbose;
+
     
     Context g_context;
     Device g_Device;
@@ -131,7 +133,7 @@ class GEM_EXTERN pix_openni : public GemBase
         bool m_player; //playback started?
     
         bool m_recorder;  // recorder started?
-    
+          
       bool rgb_started;
       bool depth_started;
       bool audio_started;
@@ -216,6 +218,7 @@ class GEM_EXTERN pix_openni : public GemBase
     	static void    	floatHandMessCallback(void *data, float hand);
     	static void    	floatDepthOutputMessCallback(void *data, float depth_output);
     	static void    	renderDepthCallback(void *data, t_symbol*s, int argc, t_atom*argv);
+      static void     verboseMessCallback(void *data, t_floatarg value);
     	
 			t_outlet        *m_depthoutlet; 
 			t_inlet         *m_depthinlet;
