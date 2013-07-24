@@ -1,8 +1,8 @@
-#N canvas 534 205 843 515 10;
+#N canvas 521 133 843 515 10;
 #X obj 109 120 gemhead;
 #X obj 247 64 gemwin;
 #X msg 247 22 dimen 640 480 \, create \, 1;
-#X msg 370 60 destroy;
+#X msg 409 46 destroy;
 #X obj 22 373 pix_texture;
 #X msg 416 24 lighting 1;
 #X obj 416 2 loadbang;
@@ -262,7 +262,7 @@
 #X connect 7 2 5 0;
 #X connect 7 3 4 0;
 #X connect 7 4 1 0;
-#X restore 226 190 pd tracking_data;
+#X restore 225 210 pd tracking_data;
 #X text 233 174 tracking and info output;
 #X floatatom 432 290 5 0 0 0 - - -;
 #X text 448 317 convert depth output to human viewable;
@@ -361,7 +361,6 @@
 #X text 480 169 3rd: depth stream on;
 #X text 480 185 4th: skeleton tracking on;
 #X text 481 202 5th: hand tracking on;
-#X text 512 138 (serial nr not supported);
 #N canvas 104 124 721 288 RECORD 0;
 #X obj 105 179 s \$0-prop;
 #X obj 119 111 vradio 15 1 0 2 empty empty empty 0 -8 0 10 -262144
@@ -437,7 +436,7 @@
 #X connect 18 0 19 0;
 #X connect 19 0 0 0;
 #X restore -26 88 pd RECORD;
-#N canvas 895 383 1012 557 PROPERTIES 1;
+#N canvas 737 522 1012 557 PROPERTIES 1;
 #X text 29 17 properties for pix_openni;
 #X obj 54 54 cnv 15 300 150 empty empty empty 20 12 0 14 -232576 -66577
 0;
@@ -495,7 +494,7 @@
 #X text 241 237 of RGB and Depth;
 #X text 257 254 OFF;
 #X text 257 270 ON;
-#X obj 692 55 cnv 15 300 350 empty empty empty 20 12 0 14 -128992 -66577
+#X obj 692 55 cnv 15 300 400 empty empty empty 20 12 0 14 -128992 -66577
 0;
 #X obj 697 274 s \$0-prop;
 #X floatatom 817 78 5 0 0 0 - - -;
@@ -550,14 +549,21 @@
 #X floatatom 798 416 5 0 0 0 - - -;
 #X text 835 415 0 - 1 default: 0.5;
 #X msg 798 437 hand_smoothing \$1;
-#X obj 39 409 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+#X obj 40 384 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
-#X msg 56 409 enumerate;
-#X obj 53 441 s \$0-prop;
-#X text 121 412 bang and enumerate message are the same;
-#X text 132 428 it prints out some info;
-#X text 131 444 device number and device list are sent to the rightmost
-outlet;
+#X obj 40 402 s \$0-prop;
+#X text 58 384 bang post lots of infos in pd console;
+#X obj 32 430 cnv 15 550 100 empty empty empty 20 12 0 14 -260097 -66577
+0;
+#X obj 39 508 s \$0-prop;
+#X msg 39 436 enumerate;
+#X msg 57 456 device 1;
+#X msg 120 456 device 0x41ede646;
+#X text 100 437 find how many devices are available;
+#X text 236 456 opens given device with id (float) or serial (symbol)
+;
+#X msg 65 479 close_device;
+#X text 146 480 close current device;
 #X connect 2 0 11 0;
 #X connect 3 0 2 0;
 #X connect 4 0 5 0;
@@ -597,10 +603,13 @@ outlet;
 #X connect 88 0 87 0;
 #X connect 92 0 94 0;
 #X connect 94 0 46 0;
-#X connect 95 0 97 0;
-#X connect 96 0 97 0;
+#X connect 95 0 96 0;
+#X connect 100 0 99 0;
+#X connect 101 0 99 0;
+#X connect 102 0 99 0;
+#X connect 105 0 99 0;
 #X restore 43 87 pd PROPERTIES;
-#N canvas 348 101 640 372 SECOND-KINECT 0;
+#N canvas 346 107 640 372 SECOND-KINECT 0;
 #X obj 116 20 gemhead;
 #X obj 29 273 pix_texture;
 #X obj 233 29 gemhead;
@@ -629,27 +638,23 @@ activated!;
 #X connect 14 0 8 0;
 #X restore 524 468 pd SECOND-KINECT;
 #X text -34 7 pix_openni 0.12;
-#X text 480 126 1st: device ID (starting with ONE!);
 #X obj 391 194 print info;
 #X obj 391 174 spigot;
-#X obj 423 156 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
+#X obj 423 156 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X msg 163 111 device \$1;
 #X obj 320 147 print;
-#X msg 163 88 symbol 0x41ede646;
-#X floatatom 281 88 5 0 0 0 - - -;
-#X msg 140 71 symbol 0x41ede647;
-#X msg 336 100 close_device;
 #X obj 108 155 pix_openni 1 0 1 0 0;
-#X connect 0 0 58 0;
+#X text 480 126 1st: (float) device ID (starting with ONE!);
+#X text 512 138 (symbol) serial number;
+#X connect 0 0 51 0;
 #X connect 2 0 1 0;
 #X connect 3 0 1 0;
 #X connect 4 0 20 0;
 #X connect 5 0 1 0;
 #X connect 6 0 5 0;
-#X connect 7 0 58 1;
+#X connect 7 0 51 1;
 #X connect 8 0 33 0;
-#X connect 11 0 58 0;
+#X connect 11 0 51 0;
 #X connect 18 0 27 2;
 #X connect 20 0 9 0;
 #X connect 21 0 23 0;
@@ -665,14 +670,9 @@ activated!;
 #X connect 34 0 4 0;
 #X connect 35 0 8 0;
 #X connect 36 0 24 0;
-#X connect 50 0 49 0;
-#X connect 51 0 50 1;
-#X connect 52 0 58 0;
-#X connect 54 0 52 0;
-#X connect 55 0 52 0;
-#X connect 56 0 52 0;
-#X connect 57 0 58 0;
-#X connect 58 0 34 0;
-#X connect 58 1 36 0;
-#X connect 58 2 16 0;
-#X connect 58 2 50 0;
+#X connect 48 0 47 0;
+#X connect 49 0 48 1;
+#X connect 51 0 34 0;
+#X connect 51 1 36 0;
+#X connect 51 2 16 0;
+#X connect 51 2 48 0;

@@ -1614,6 +1614,8 @@ void pix_openni :: obj_setupCallback(t_class *classPtr)
 
 	class_addmethod(classPtr, (t_method)(&pix_openni::renderDepthCallback),
         gensym("depth_state"), A_GIMME, A_NULL);
+        
+        
 }
 
 void pix_openni :: VideoModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv)
