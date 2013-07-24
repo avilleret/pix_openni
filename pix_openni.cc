@@ -391,7 +391,7 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 
 	m_dataout = outlet_new(this->x_obj, 0);
 	
-	post("pix_openni 0.13 - 2011/2012 by Matthias Kronlachner and Antoine Villeret");
+	post("pix_openni 0.13 - 2011/2012 by Matthias Kronlachner\n\t2013 - Antoine Villeret");
 
 	// init status variables
 	
@@ -430,11 +430,29 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 	m_hand_smoothing=0.5;
 	
         m_device_id = 1;
-    
+        
+        XnStatus nRetVal;  // ERROR STATUS
+        
+        nRetVal = g_context.Init(); // key difference: Init() not InitFromXml()
+        if (nRetVal != XN_STATUS_OK)
+        {
+                throw(GemException("OpenNI Init() failed\n"));
+
+        } else {
+                openni_ready = true;
+        }
+        
+        Init(); // Init OpenNI
+
+        
 	// CHECK FOR ARGS AND ACTIVATE STREAMS
 	if (argc >= 1)
 	{
-                m_device_id = atom_getint(&argv[0]);
+          if (argv->a_type == A_FLOAT){
+            m_device_id = atom_getint(&argv[0]);
+          } else if ( argv->a_type == A_SYMBOL){
+            deviceSerialMess(*atom_getsymbol(argv)); 
+          }
 	}
 	if (argc >= 2)
 	{
@@ -467,19 +485,7 @@ pix_openni :: pix_openni(int argc, t_atom *argv)
 
 	m_width=640;
         m_height=480;
-    
-        XnStatus nRetVal;  // ERROR STATUS
         
-        nRetVal = g_context.Init(); // key difference: Init() not InitFromXml()
-        if (nRetVal != XN_STATUS_OK)
-        {
-                throw(GemException("OpenNI Init() failed\n"));
-
-        } else {
-                openni_ready = true;
-        }
-    
-        Init(); // Init OpenNI
 }
 
 /////////////////////////////////////////////////////////
@@ -1369,7 +1375,7 @@ void pix_openni :: bangMess ()
 
 void pix_openni :: enumerateMess ()
 {
-	// OUTPUT OPENNI DEVICES OPENED
+  // OUTPUT OPENNI DEVICES OPENED
     EnumerationErrors errors;
     XnStatus nRetVal;  // ERROR STATUS
     
@@ -1396,6 +1402,18 @@ void pix_openni :: enumerateMess ()
         if ( nRetVal != XN_STATUS_OK ) {
                 error("error in device enumeration");
                 break;
+        }
+        
+        if (deviceNode.IsValid()){
+           printf("device node valid\n");
+        } else {
+           printf("device node NOT valid\n");
+        }
+        
+        if ( deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION) ){
+           printf("device node is capable of identification\n");
+        } else {
+           printf("device node is NOT capable of identification\n");
         }
         
         if (deviceNode.IsValid() && deviceNode.IsCapabilitySupported(XN_CAPABILITY_DEVICE_IDENTIFICATION))
@@ -1443,9 +1461,7 @@ void pix_openni :: deviceMess(int id)
         for (; it != list.End() ; ++it, ++i){
                 if ( i == int(id) ) {
                         m_device_id = i;
-                        printf("close device if open...");
                         closeDeviceMess();
-                        printf("OK\n");
                         if ( !Init() ){
                                 error("could not initialize device with id %d", int(id));
                         }
@@ -1461,10 +1477,9 @@ void pix_openni :: deviceMess(int id)
 
 void pix_openni :: deviceSerialMess(t_symbol serial)
 {
-        EnumerationErrors errors;
         XnStatus nRetVal;  // ERROR STATUS
         NodeInfoList list;
-        nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, &errors);
+        nRetVal = g_context.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, list, NULL);
         
         unsigned int lSerial = strtol(serial.s_name, NULL, 16);
 
@@ -1486,8 +1501,8 @@ void pix_openni :: deviceSerialMess(t_symbol serial)
                     deviceNode.GetIdentificationCap().GetSerialNumber(strSerialNumber, 256);
                     unsigned int intSerialNumber = atoi(strSerialNumber);
                     
+                    
                     if ( lSerial == intSerialNumber ) {
-                       printf("selected device %i\n",i);
                        m_device_id = i;
                        closeDeviceMess();
                        if ( !Init() ){
@@ -1505,7 +1520,6 @@ void pix_openni :: deviceSerialMess(t_symbol serial)
 }
 
 void pix_openni :: closeDeviceMess(){
-   printf("close devic...\t");
    g_context.StopGeneratingAll();
    
    if (depth_started)
@@ -1526,9 +1540,8 @@ void pix_openni :: closeDeviceMess(){
            skeleton_started = false;
    }
 
-   g_Device.Release();
+   //~ g_Device.Release();
    openni_ready = false;
-   printf("OK\n");
 }
 
 /////////////////////////////////////////////////////////
@@ -1926,14 +1939,14 @@ void pix_openni :: floatPlayMessCallback(void *data, t_floatarg value)
         }
         me->g_player.Release();
         me->g_Device.Release();
-        me->g_context.Release();
+        //~me->g_context.Release();
         
 		if (!me->Init())
 		{
 			me->post("OPEN NI init() failed.");
 		} else {
 			me->post("OPEN NI initialised successfully.");
-            me->m_player = false;
+                        me->m_player = false;
 			me->openni_ready = true;
 		}
 	}
