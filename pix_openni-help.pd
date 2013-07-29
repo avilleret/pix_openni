@@ -1,5 +1,5 @@
-#N canvas 521 133 843 515 10;
-#X obj 109 120 gemhead;
+#N canvas 517 145 843 515 10;
+#X obj 108 120 gemhead;
 #X obj 247 64 gemwin;
 #X msg 247 22 dimen 640 480 \, create \, 1;
 #X msg 409 46 destroy;
@@ -436,7 +436,7 @@
 #X connect 18 0 19 0;
 #X connect 19 0 0 0;
 #X restore -26 88 pd RECORD;
-#N canvas 737 522 1012 557 PROPERTIES 1;
+#N canvas 733 522 1012 557 PROPERTIES 1;
 #X text 29 17 properties for pix_openni;
 #X obj 54 54 cnv 15 300 150 empty empty empty 20 12 0 14 -232576 -66577
 0;
@@ -444,7 +444,7 @@
 #X obj 70 88 vradio 15 1 0 2 empty empty empty 0 -8 0 10 -262144 -1
 -1 0;
 #X obj 127 88 vradio 15 1 0 2 empty empty empty 0 -8 0 10 -262144 -1
--1 0;
+-1 1;
 #X msg 127 122 depth \$1;
 #X obj 195 88 vradio 15 1 0 2 empty empty empty 0 -8 0 10 -262144 -1
 -1 0;
@@ -564,6 +564,10 @@
 ;
 #X msg 65 479 close_device;
 #X text 146 480 close current device;
+#X msg 316 506 verbose \$1;
+#X obj 316 488 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+1;
+#X text 338 487 change verbose level;
 #X connect 2 0 11 0;
 #X connect 3 0 2 0;
 #X connect 4 0 5 0;
@@ -608,6 +612,8 @@
 #X connect 101 0 99 0;
 #X connect 102 0 99 0;
 #X connect 105 0 99 0;
+#X connect 107 0 99 0;
+#X connect 108 0 107 0;
 #X restore 43 87 pd PROPERTIES;
 #N canvas 346 107 640 372 SECOND-KINECT 0;
 #X obj 116 20 gemhead;
@@ -642,19 +648,18 @@ activated!;
 #X obj 391 174 spigot;
 #X obj 423 156 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X obj 320 147 print;
 #X obj 108 155 pix_openni 1 0 1 0 0;
 #X text 480 126 1st: (float) device ID (starting with ONE!);
 #X text 512 138 (symbol) serial number;
-#X connect 0 0 51 0;
+#X connect 0 0 50 0;
 #X connect 2 0 1 0;
 #X connect 3 0 1 0;
 #X connect 4 0 20 0;
 #X connect 5 0 1 0;
 #X connect 6 0 5 0;
-#X connect 7 0 51 1;
+#X connect 7 0 50 1;
 #X connect 8 0 33 0;
-#X connect 11 0 51 0;
+#X connect 11 0 50 0;
 #X connect 18 0 27 2;
 #X connect 20 0 9 0;
 #X connect 21 0 23 0;
@@ -672,7 +677,7 @@ activated!;
 #X connect 36 0 24 0;
 #X connect 48 0 47 0;
 #X connect 49 0 48 1;
-#X connect 51 0 34 0;
-#X connect 51 1 36 0;
-#X connect 51 2 16 0;
-#X connect 51 2 48 0;
+#X connect 50 0 34 0;
+#X connect 50 1 36 0;
+#X connect 50 2 16 0;
+#X connect 50 2 48 0;
