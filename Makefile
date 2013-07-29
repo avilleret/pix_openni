@@ -1,14 +1,16 @@
 # change to your local directories!
 PD_APP_DIR =  /home/antoine/pd/pd
 GEM_DIR = /home/antoine/pd/Gem
+OPENNI_DIR=/home/antoine/kinect/version_2/OpenNI-Linux-x64-2.2
+
 
 #linux doesnt work yet
 UNAME := $(shell uname -s)
 ifeq ($(UNAME),Linux)
- CPPFLAGS = -I/usr/include/ni `pkg-config --cflags pd` `pkg-config --cflags Gem`
+ CPPFLAGS = `pkg-config --cflags pd` `pkg-config --cflags Gem` -I$(OPENNI_DIR)/Include
  CXXFLAGS = -g -O2 -fPIC -freg-struct-return -Os -falign-loops=32 -falign-functions=32 -falign-jumps=32 -funroll-loops -ffast-math -mmmx
- LDFLAGS = -shared -rdynamic
- LIBS = -lOpenNI
+ LDFLAGS = -shared -rdynamic -Wl
+ LIBS = -lOpenNI2
  EXTENSION = pd_linux
  USER_EXTERNALS=$(HOME)/pd-externals
 endif
