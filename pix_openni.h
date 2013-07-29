@@ -13,31 +13,52 @@ LOG
 
 -----------------------------------------------------------------*/
 
+/*****************************************************************************
+*                                                                            *
+*  OpenNI 2.x Alpha                                                          *
+*  Copyright (C) 2012 PrimeSense Ltd.                                        *
+*                                                                            *
+*  This file is part of OpenNI.                                              *
+*                                                                            *
+*  Licensed under the Apache License, Version 2.0 (the "License");           *
+*  you may not use this file except in compliance with the License.          *
+*  You may obtain a copy of the License at                                   *
+*                                                                            *
+*      http://www.apache.org/licenses/LICENSE-2.0                            *
+*                                                                            *
+*  Unless required by applicable law or agreed to in writing, software       *
+*  distributed under the License is distributed on an "AS IS" BASIS,         *
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  *
+*  See the License for the specific language governing permissions and       *
+*  limitations under the License.                                            *
+*                                                                            *
+*****************************************************************************/
+
 #ifndef INCLUDE_pix_openni_H_
 #define INCLUDE_pix_openni_H_
 
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+//~#include <stdio.h>
+//~#include <stdlib.h>
+//~#include <string.h>
 //#include <assert.h>
-#include <iomanip>
+//~#include <iomanip>
 //#include <cmath>
-#include <vector>
-#include <stdint.h>
+//~#include <vector>
+//~#include <stdint.h>
 
-#include "XnCodecIDs.h"
-#include "XnOpenNI.h"
-#include "XnCppWrapper.h"
+#include <OpenNI.h>
 
 #include "Base/GemBase.h"
-#include "Gem/Properties.h"
-#include "Gem/Image.h"
+#include "Gem/Exception.h"
+//~#include "Gem/Properties.h"
+#include "Gem/State.h"
+//~#include "Gem/Image.h"
 #include "Base/GemPixObj.h"
+#include "RTE/MessageCallbacks.h"
 
-
-using namespace xn;
+using namespace openni;
 /*-----------------------------------------------------------------
 -------------------------------------------------------------------
 CLASS
@@ -48,181 +69,66 @@ KEYWORDS
     pix
     
 DESCRIPTION
+* New OpenNI 2.x implementation for pure-data
+* based on Matthias Kronlachner's pix_openni
    
 -----------------------------------------------------------------*/
+class FrameListener; 
+
 #ifdef _WIN32
 class GEM_EXPORT pix_openni : public GemBase
 #else
 class GEM_EXTERN pix_openni : public GemBase
 #endif
 {
-    CPPEXTERN_HEADER(pix_openni, GemBase);
+  CPPEXTERN_HEADER(pix_openni, GemBase);
 
-    public:
+public:
 
-	    //////////
-	    // Constructor
-    	pix_openni(int argc, t_atom *argv);
-    
-        bool Init();
-    
-    	t_outlet 	*m_dataout;
-			
-			void 				outputJoint (XnUserID player, XnSkeletonJoint eJoint);
-			
-			bool m_osc_output;
-			bool m_real_world_coords;
-			bool m_output_euler;
-			bool m_auto_calibration;
-      bool m_verbose;
+ 	pix_openni(int argc, t_atom *argv);
+  
+  Device m_device;
+  const char *m_deviceURI;
+  
+  bool m_rgb, m_ir, m_depth;
+  
+  FrameListener *m_rgbListener, *m_depthListener;
+  VideoFrameRef m_rgbFrame, m_depthFrame;
+  
+  //~ pix_block where the pixels are
+  pixBlock m_rgbPix, m_depthPix;
+  
+  VideoStream m_rgbStream, m_depthStream;  
+  PixelFormat m_rgbPixFormat, m_depthPixFormat;
+  
+protected:
 
-    
-    Context g_context;
-    Device g_Device;
-    ScriptNode g_scriptNode;
-    DepthGenerator g_depth;
-    ImageGenerator g_image;
-    DepthMetaData g_depthMD;
-    ImageMetaData g_imageMD;
-    SceneMetaData g_sceneMD;
-    
-    Recorder g_recorder;
-    
-    UserGenerator g_UserGenerator;
-    Player g_player;
-    
-    HandsGenerator g_HandsGenerator;
-    GestureGenerator gestureGenerator;
-    
-    int m_device_id;
-    
-    protected:
-    	
-    	//////////
-    	// Destructor
-    	virtual ~pix_openni();
+  virtual ~pix_openni();
 
-			virtual void	startRendering();
-    	//////////
-    	// Rendering 	
-			virtual void 	render(GemState *state);
-			
-			virtual void 	postrender(GemState *state);
-		
-		  // Stop Transfer
-			virtual void	stopRendering();
-    	
-	//////////
-    	// Settings/Info
-    	//void 				outputJoint (XnUserID player, XnSkeletonJoint eJoint);
-    	void				VideoModeMess(int argc, t_atom*argv);
-			void				DepthModeMess(int argc, t_atom*argv);
-    	void	    	bangMess();
-    	void	    	enumerateMess();
-      void        deviceMess(int id);
-      void        deviceSerialMess(t_symbol serial);
-      void        closeDeviceMess();
-			void				renderDepth(int argc, t_atom*argv);
-			
-			
-  // Settings
-  		int x_dim;
+  virtual void	startRendering();
+  virtual void  stopRendering();
+  virtual void 	render(GemState *state);
+  void  renderDepth(t_symbol *s,int argc, t_atom*argv);
+  
+  void  enumerateMess();
+  void  openMess(t_symbol *s,int argc, t_atom*argv);
+  void  closeMess();
+  void  rgbMess(t_float f);
+  void  irMess(t_float f);
+  void  depthMess(t_float f);
+  
+private:
+  t_outlet  *m_depthoutlet;
+  t_outlet  *m_dataout;
+  t_inlet   *m_depthinlet;
+}; 
 
-			int openni_ready;
-			
-        bool m_player; //playback started?
-    
-        bool m_recorder;  // recorder started?
-          
-      bool rgb_started;
-      bool depth_started;
-      bool audio_started;
-			bool usergen_started;
-      bool skeleton_started;
-      bool hand_started;
-      
-      bool rgb_wanted;
-      bool depth_wanted;
-      bool audio_wanted;
-      bool skeleton_wanted;
-			bool usergen_wanted;
-      bool hand_wanted;
-			
-			bool m_registration_wanted;
-			bool m_registration;
-			bool m_usercoloring;
-
-			float m_skeleton_smoothing;
-			float m_hand_smoothing;
-      
-			int	depth_output;
-			int	req_depth_output;
-			
-			std::string m_filename;
-        
-			int 		m_width;
-			int			m_height;
-			
-			XnCallbackHandle hUserCallbacks, hHandsCallbacks, hGestureCallbacks; // Hands
-			XnCallbackHandle hCalibrationStart, hCalibrationComplete, hPoseDetected, hCalibrationInProgress, hPoseInProgress, hUserGeneratorNewData; // Skeleton
-			
-			XnChar strRequiredCalibrationPose[XN_MAX_NAME_LENGTH];
-	
-			bool      m_rendering; // "true" when rendering is on, false otherwise
-    
-    	//////////
-    	// The pixBlock with the current image
-    	pixBlock    	m_image;
-    	pixBlock    	m_depth;
-    	
-    	GemState					*depth_state;
-    	
-			//////////
-			// The current image
-			imageStruct     m_imageStruct;
-			
-			
-			
-    private:
-    	//////////
-    	// Static member functions
-    	static void			VideoModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void			DepthModeMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-    	static void    	bangMessCallback(void *data);
-    	static void    	enumerateMessCallback(void *data);
-      static void     deviceMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-      static void     closeDeviceMessCallback(void *data);
-    	
-			static void    	openMessCallback(void *data, std::string filename);
-			static void    	floatPlayMessCallback(void *data, float value);
-			static void    	floatPlaybackSpeedMessCallback(void *data, float value);
-			static void    	floatJumpToImageFrameMessCallback(void *data, float value);
-			static void    	floatJumpToDepthFrameMessCallback(void *data, float value);
-			static void    	floatRecordMessCallback(void *data, float value);
-			static void    	floatRealWorldCoordsMessCallback(void *data, float value);
-			static void    	floatRegistrationMessCallback(void *data, float value);
-			static void    	floatRgbRegistrationMessCallback(void *data, float value);
-			static void    	floatOscOutputMessCallback(void *data, float osc_output);
-			static void    	floatSkeletonSmoothingMessCallback(void *data, float value);
-			static void    	floatHandSmoothingMessCallback(void *data, float value);
-			static void    	floatEulerOutputMessCallback(void *data, float value);
-			static void    	StartUserMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void    	StopUserMessCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-			static void    	floatAutoCalibrationMessCallback(void *data, float value);
-			static void    	floatUserColoringMessCallback(void *data, float value);
-			static void    	UserInfoMessCallback(void *data);
-    	static void    	floatRgbMessCallback(void *data, float rgb);
-    	static void    	floatDepthMessCallback(void *data, float depth);
-    	static void    	floatUsergenMessCallback(void *data, float value);
-    	static void    	floatSkeletonMessCallback(void *data, float skeleton);
-    	static void    	floatHandMessCallback(void *data, float hand);
-    	static void    	floatDepthOutputMessCallback(void *data, float depth_output);
-    	static void    	renderDepthCallback(void *data, t_symbol*s, int argc, t_atom*argv);
-      static void     verboseMessCallback(void *data, t_floatarg value);
-    	
-			t_outlet        *m_depthoutlet; 
-			t_inlet         *m_depthinlet;
-
-};
-
+class FrameListener : public VideoStream::NewFrameListener
+{
+public:
+  FrameListener();
+  void onNewFrame(VideoStream& stream);
+  void unSet();
+  unsigned int m_newFrame;
+}; 
 #endif	// for header file
