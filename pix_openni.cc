@@ -39,16 +39,29 @@
 
 #include "pix_openni.h"
 
-FrameListener :: FrameListener() : m_newFrame(0){}
-
-void FrameListener :: onNewFrame(VideoStream& stream)
+class FrameListener : public VideoStream::NewFrameListener
 {
-  m_newFrame++;
+public:
+  FrameListener() : m_newFrame(0){};
+  void onNewFrame(VideoStream& stream)
+  {
+    m_newFrame++;
+  }
+  void unSet(){
+    m_newFrame--;
+  }
+  unsigned int m_newFrame;
+};
+
+CPPEXTERN_NEW(DepthChannel);
+
+DepthChannel :: DepthChannel(){
+  m_depthinlet  = inlet_new(this->x_obj, &this->x_obj->ob_pd, gensym("gem_state"), gensym("gem_state"));
+  m_frameListener = new FrameListener();
 }
 
-void FrameListener :: unSet()
-{
-  m_newFrame--;
+DepthChannel :: ~DepthChannel(){
+  delete(m_frameListener);
 }
 
 CPPEXTERN_NEW_WITH_GIMME(pix_openni);
@@ -57,19 +70,18 @@ CPPEXTERN_NEW_WITH_GIMME(pix_openni);
 pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
                                                    m_rgb(0), \
                                                    m_ir(0), \
-                                                   m_depth(0), \
-                                                   m_rgbListener(NULL), \
-                                                   m_depthListener(NULL)
+                                                   m_depth(0)
 {
    
-   	// second inlet/outlet for depthmap
-	m_depthoutlet = outlet_new(this->x_obj, 0);
-	m_depthinlet  = inlet_new(this->x_obj, &this->x_obj->ob_pd, gensym("gem_state"), gensym("depth_state"));
+	//~m_depthinlet  = inlet_new(this->x_obj, &this->x_obj->ob_pd, gensym("gem_state"), gensym("depth_state"));
+	//~m_depthoutlet = outlet_new(this->x_obj, 0);
+  m_depthChannel = new DepthChannel; // create a new intance of DepthChannel wichi inherit from GemBase and thus create a new outlet...
+  m_depthChannel->m_devicePt = &m_device;
+  m_depthChannel->m_depthPt = &m_depth;
 
 	m_dataout = outlet_new(this->x_obj, 0);
   
-  m_rgbListener = new FrameListener;
-  m_depthListener = new FrameListener;
+  m_frameListener = new FrameListener;
    
    // initialize OpenNI
    Status rc = STATUS_OK;
@@ -77,7 +89,7 @@ pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
    rc = OpenNI::initialize();
    if ( rc != STATUS_OK ){
       error("can't initialized OpenNI : %s", OpenNI::getExtendedError());
-#ifdef __UNIX__
+#ifdef __linux__
       error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
 #endif
       throw(GemException("OpenNI Init() failed\n"));
@@ -86,41 +98,68 @@ pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
 
 // Destructor
 pix_openni :: ~pix_openni(){
-   OpenNI::shutdown();
+  closeMess();
+  delete(m_frameListener);
+  delete(m_depthChannel);
+  OpenNI::shutdown();
 }
 
 void pix_openni :: obj_setupCallback(t_class *classPtr)
 {
   CPPEXTERN_MSG0(classPtr, "enumerate", enumerateMess);
   CPPEXTERN_MSG (classPtr, "open", openMess);
+  CPPEXTERN_MSG (classPtr, "openBySerial", openBySerialMess);
   CPPEXTERN_MSG0(classPtr, "close", closeMess);
   CPPEXTERN_MSG1(classPtr, "rgb", rgbMess, t_float);
   CPPEXTERN_MSG1(classPtr, "depth", depthMess, t_float);
   CPPEXTERN_MSG1(classPtr, "ir", irMess, t_float);
-  CPPEXTERN_MSG (classPtr, "depth_state", renderDepth);
+  CPPEXTERN_MSG0(classPtr, "getVideoMode", getVideoMode);
+  CPPEXTERN_MSG1(classPtr, "setVideoMode", setVideoMode, t_symbol*);
+}
+
+void DepthChannel :: obj_setupCallback(t_class *classPtr)
+{
+  //~CPPEXTERN_MSG (classPtr, "depth_state", renderDepth);
 }
 
 void pix_openni :: enumerateMess(){
    
-   Array<openni::DeviceInfo> deviceList;
-   OpenNI::enumerateDevices(&deviceList);
-   
-   t_atom a_devices;
-   SETFLOAT(&a_devices, deviceList.getSize());
-   outlet_anything(m_dataout, gensym("devices"), 1, &a_devices);
-   
-   for(int i=0; i<deviceList.getSize(); i++){
-      t_atom a_deviceInfo[5];
-      SETSYMBOL(a_deviceInfo, gensym(deviceList[i].getUri()));
-      char hexID[7];
-      sprintf(hexID, "0x%04x", deviceList[i].getUsbVendorId());
-      SETSYMBOL(a_deviceInfo+1, gensym(hexID));
-      sprintf(hexID, "0x%04x", deviceList[i].getUsbProductId());
-      SETSYMBOL(a_deviceInfo+2, gensym(hexID));
-      SETSYMBOL(a_deviceInfo+3, gensym(deviceList[i].getVendor()));
-      SETSYMBOL(a_deviceInfo+4, gensym(deviceList[i].getName()));
-      outlet_anything(m_dataout, gensym("device"), 5, a_deviceInfo);
-   }
+  Array<openni::DeviceInfo> deviceList;
+  OpenNI::enumerateDevices(&deviceList);
+  
+  t_atom a_devices;
+  SETFLOAT(&a_devices, deviceList.getSize());
+  outlet_anything(m_dataout, gensym("devices"), 1, &a_devices);
+  
+  for(int i=0; i<deviceList.getSize(); i++){
+    t_atom a_deviceInfo[6];
+    SETSYMBOL(a_deviceInfo, gensym(deviceList[i].getUri()));
+    char hexID[7];
+    sprintf(hexID, "0x%04x", deviceList[i].getUsbVendorId());
+    SETSYMBOL(a_deviceInfo+1, gensym(hexID));
+    sprintf(hexID, "0x%04x", deviceList[i].getUsbProductId());
+    SETSYMBOL(a_deviceInfo+2, gensym(hexID));
+    SETSYMBOL(a_deviceInfo+3, gensym(deviceList[i].getVendor()));
+    SETSYMBOL(a_deviceInfo+4, gensym(deviceList[i].getName()));
+    
+    Device device;
+    char serial[512];
+    int datasize=sizeof(serial);
+
+    if ( device.open(deviceList[i].getUri()) == STATUS_OK ){
+      if ( device.getProperty(ONI_DEVICE_PROPERTY_SERIAL_NUMBER, &serial, &datasize) == STATUS_OK ){
+        SETSYMBOL(a_deviceInfo+5, gensym(serial));
+      } else {
+        SETSYMBOL(a_deviceInfo+5, gensym(deviceList[i].getUri()));
+      }
+      device.close();
+    } else {
+      SETSYMBOL(a_deviceInfo+5, gensym(deviceList[i].getUri()));
+    }
+
+    outlet_anything(m_dataout, gensym("device"), 6, a_deviceInfo);
+    printf("device : %s %04x%04x %s %s %s\n",deviceList[i].getUri(),deviceList[i].getUsbVendorId(),deviceList[i].getUsbProductId(),deviceList[i].getVendor(),deviceList[i].getName(), serial);
+  }
 }
 
 // enable/disable rgb grabbing
@@ -171,22 +210,21 @@ void pix_openni :: depthMess(t_float f){
     return;
   }
   if ( f > 0 ){
-    m_rgb = 1;
+    m_depth = 1;
     if ( !m_device.hasSensor(SENSOR_DEPTH) ){
-      m_rgb = 0;
+      m_depth = 0;
       error("device %s has no rgb sensor", m_deviceURI);
     }
   } else {
-    m_rgb = 0;
+    m_depth = 0;
   }
   t_atom a_depth;
   SETFLOAT(&a_depth, m_depth);
   outlet_anything(m_dataout, gensym("depth"), 1, &a_depth);
 }
 
-// Open a device/file by its URI or (for device only) by its vendor:device unique ID
+// Open a device/file by its URI
 // one argument : symbol (URI)
-// two argument : vendor id, model id
 void pix_openni :: openMess(t_symbol *s,int argc, t_atom*argv){   
   if (argc>0){
     if (argv->a_type == A_SYMBOL){
@@ -197,6 +235,7 @@ void pix_openni :: openMess(t_symbol *s,int argc, t_atom*argv){
   }
   
   Status rc = STATUS_OK;
+  verbose(4, "open device with URI %s", m_deviceURI);
   rc = m_device.open(m_deviceURI);
   t_atom a_status;
   SETFLOAT(&a_status, rc);
@@ -205,91 +244,121 @@ void pix_openni :: openMess(t_symbol *s,int argc, t_atom*argv){
     error("can't open device %s : %s", m_deviceURI, OpenNI::getExtendedError());
     return;
   }
+  
+  char serial[512]; 
+  int datasize=sizeof(serial);
+  rc=m_device.getProperty(ONI_DEVICE_PROPERTY_SERIAL_NUMBER, &serial, &datasize);
+  if ( rc != STATUS_OK ){
+    printf("error when getting serial number : %s\n", OpenNI::getExtendedError());
+    return;
+  } else {
+    printf("device %s has serial %s\n", m_deviceURI, serial);
+  }
+}
+
+// OpenBySerial : open a device thanks to its serial
+void pix_openni :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
+  if ( argc < 1 ){
+    error("openBySerial message needs one symbol argument");
+    return;
+  }
+  
+  if ( argv[0].a_type != A_SYMBOL ){
+    error("openBySerial message needs one symbol argument");
+    return;
+  }
+  
+  char *a_serial;
+
+  a_serial=argv[0].a_w.w_symbol->s_name;
+  
+  Array<openni::DeviceInfo> deviceList;
+  OpenNI::enumerateDevices(&deviceList);
+  int i;
+  for(i=0; i<deviceList.getSize(); i++){
+    Device device;
+    Status rc = STATUS_OK;
+    rc=device.open(deviceList[i].getUri());
+    if ( rc == STATUS_OK ){
+      char serial[512]; 
+      int datasize=sizeof(serial);
+      rc=device.getProperty(ONI_DEVICE_PROPERTY_SERIAL_NUMBER, &serial, &datasize);
+      device.close();
+      if( rc == STATUS_OK && std::string(a_serial) == std::string(serial) ){
+        m_deviceURI=deviceList[i].getUri();
+        if (m_device.isValid()) closeMess();
+        rc=m_device.open(m_deviceURI);
+        if( rc != STATUS_OK ){
+          m_deviceURI=ANY_DEVICE;
+        } else {
+          verbose(4, "device with serial %s is open", a_serial);
+          t_atom a_status;
+          SETFLOAT(&a_status,rc);
+          outlet_anything(m_dataout, gensym("open"), 1, &a_status);
+          break;
+        }
+      }
+    }
+  }
+  if (i==deviceList.getSize()) error("can't find device with serial %s", a_serial);
 }
 
 // Close the device/file
 void pix_openni :: closeMess(){
+  m_videoStream.removeNewFrameListener(m_frameListener);
+  m_videoStream.stop();
+  m_videoStream.destroy();
   m_device.close();
 }
 
+void pix_openni :: getVideoMode(){
+    printf("getVideoMode\n");
+
+  if ( !m_device.isValid() ){
+    error("please open a device before...");
+    return;
+  }
+  
+  const SensorInfo *sensorInfo;
+  sensorInfo = m_device.getSensorInfo(SENSOR_DEPTH);
+  
+  if ( sensorInfo == NULL ){
+    error("current device doesn't have a depth sensor");
+  } else {
+    const Array<openni::VideoMode> *videoModeList;
+    videoModeList = &sensorInfo->getSupportedVideoModes();
+    printf("found %d videomode\n", videoModeList->getSize());
+    for (int i=0;i<videoModeList->getSize();i++){
+      VideoMode videoMode = (*videoModeList)[i];
+      std::ostringstream convert;
+      
+      convert << videoMode.getResolutionX();
+      convert << "x";
+      convert << videoMode.getResolutionY();
+      convert << "@";
+      convert << videoMode.getFps();
+      convert << "_";
+      convert << videoMode.getPixelFormat();
+      
+      t_atom a_videoMode;
+      SETSYMBOL(&a_videoMode, gensym(convert.str().c_str()));
+      outlet_anything(m_dataout, gensym("video_mode"), 1, &a_videoMode);
+    }
+  }
+}
+
+void pix_openni :: setVideoMode(t_symbol *s_videoMode){
+  std::string str_videoMode = std::string(s_videoMode->s_name);
+}
+
 void pix_openni :: render(GemState *state){
-  if ( m_rgbListener->m_newFrame ){
-    m_depthListener->unSet();
-    
+  Status rc = STATUS_OK;
+  
+  if ( !m_device.isValid() ){
+    m_device.open(m_deviceURI);
+  } else if ( !m_videoStream.isValid() ){
     Status rc = STATUS_OK;
-    
-    rc = m_rgbStream.readFrame(&m_rgbFrame);
-    if ( rc != STATUS_OK ){
-      error("error when reading rgb frame : %s\n",OpenNI::getExtendedError());
-      return;
-    }
-    
-    VideoMode vmode = m_rgbFrame.getVideoMode();
-    
-    if ( m_rgbPix.image.xsize != vmode.getResolutionX() || \
-         m_rgbPix.image.ysize != vmode.getResolutionY() || \
-         m_rgbPixFormat != vmode.getPixelFormat() )
-    {
-      m_rgbPix.image.xsize = vmode.getResolutionX();
-      m_rgbPix.image.ysize = vmode.getResolutionY();
-      m_rgbPixFormat = vmode.getPixelFormat();
-      
-      if ( m_rgbPixFormat == PIXEL_FORMAT_GRAY8){
-        m_rgbPix.image.csize = 1;
-      } else {
-        m_rgbPix.image.csize = 4;
-      }
-      
-      m_rgbPix.image.reallocate();
-      state->set(GemState::_PIX, &m_rgbPix);
-    }
-    
-    m_rgbPix.newimage=true;
-    
-    unsigned char *data = (unsigned char *) m_rgbFrame.getData();
-    unsigned char *pixels=m_rgbPix.image.data;
-    int size = m_rgbPix.image.xsize * m_rgbPix.image.ysize;
-    
-    int step;
-    switch ( vmode.getPixelFormat() ){
-      case PIXEL_FORMAT_RGB888:
-        step = 3;
-        break;
-      case PIXEL_FORMAT_GRAY8:
-        step = 1;
-        break;
-      case PIXEL_FORMAT_GRAY16:
-        step = 2;
-        break;
-      default:
-        step = 1;
-      }
-      
-      // TODO a loop to write data to m_rgbPix
-    
-    //~m_rgbPix.image.x_size;
-
-    // do something with the new frame
-  } else {
-    
-    m_rgbPix.newimage=false;
-    // do nothing
-  }
-}
-
-void pix_openni :: renderDepth(t_symbol *s,int argc, t_atom*argv){
-  if ( m_depthListener->m_newFrame ){
-    m_depthListener->unSet();
-    // do something with the new frame
-  } else {
-    // do nothing
-  }
-}
-
-void pix_openni :: startRendering(){
-  if (m_rgb){
-    Status rc = STATUS_OK;
-    rc = m_rgbStream.create(m_device, SENSOR_COLOR);
+    rc = m_videoStream.create(m_device, SENSOR_DEPTH); // force only depth output for now
     //~t_atom a_status;
     
     if ( rc != STATUS_OK ){
@@ -299,16 +368,181 @@ void pix_openni :: startRendering(){
       return;
     }
     
-    rc = m_rgbStream.start();
+    rc = m_videoStream.start();
     if ( rc != STATUS_OK ){
       error("can't start rgb stream : %s", OpenNI::getExtendedError());
       //~SETFLOAT(&a_status, rc);
       //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
       return;
     }
-    m_rgbStream.addNewFrameListener(m_rgbListener);
+    m_videoStream.addNewFrameListener(m_frameListener);
+  }
+  
+  if ( m_frameListener->m_newFrame && m_device.isValid() && m_videoStream.isValid() ){
+
+    m_frameListener->unSet();
+    
+    Status rc = STATUS_OK;
+    
+    rc = m_videoStream.readFrame(&m_videoFrameRef);
+    if ( rc != STATUS_OK ){
+      error("error when reading rgb frame : %s\n",OpenNI::getExtendedError());
+      return;
+    }
+    
+    VideoMode vmode = m_videoFrameRef.getVideoMode();
+    
+    if ( m_pixBlock.image.xsize != vmode.getResolutionX() || \
+         m_pixBlock.image.ysize != vmode.getResolutionY() || \
+         m_pixelFormat != vmode.getPixelFormat() )
+    {
+      m_pixBlock.image.xsize = vmode.getResolutionX();
+      m_pixBlock.image.ysize = vmode.getResolutionY();
+      m_pixelFormat = vmode.getPixelFormat();
+      
+      if ( m_pixelFormat == PIXEL_FORMAT_GRAY8){
+        m_pixBlock.image.csize = 1;
+      } else {
+        m_pixBlock.image.csize = 4;
+      }
+      
+      m_pixBlock.image.reallocate();
+    }
+    
+    m_pixBlock.newimage=true;
+    
+    unsigned char *data = (unsigned char *) m_videoFrameRef.getData();
+    
+    unsigned char *pixels=m_pixBlock.image.data;
+    int size = m_pixBlock.image.xsize * m_pixBlock.image.ysize;
+    
+    int step;
+    switch ( vmode.getPixelFormat() ){
+      case PIXEL_FORMAT_RGB888:
+        m_pixBlock.image.fromRGB(data);
+        m_pixBlock.image.notowned=0;
+        break;
+      case PIXEL_FORMAT_GRAY8:
+        m_pixBlock.image.data=data;
+        m_pixBlock.image.notowned=1;
+        break;
+      default:
+        while ( size-- ){
+          pixels[chGreen]=*data++;
+          pixels[chRed]=*data++;
+          pixels[chBlue]=0;
+          pixels[chAlpha]=255;
+          pixels+=4;
+        }
+        m_pixBlock.image.notowned=0;
+        break;
+    }
+    state->set(GemState::_PIX, &m_pixBlock);
+  } else {
+    m_pixBlock.newimage=false;
+    state->set(GemState::_PIX, &m_pixBlock);
+  }
+}
+
+
+void DepthChannel :: render(GemState *state){
+  printf("render depth channel\n");
+  if ( m_frameListener->m_newFrame ){
+    printf("new depth frame \n");
+    m_frameListener->unSet();
+    
+    Status rc = STATUS_OK;
+    
+    rc = m_videoStream.readFrame(&m_videoFrameRef);
+    if ( rc != STATUS_OK ){
+      error("error when reading rgb frame : %s\n",OpenNI::getExtendedError());
+      return;
+    }
+    
+    VideoMode vmode = m_videoFrameRef.getVideoMode();
+    
+    if ( m_pixBlock.image.xsize != vmode.getResolutionX() || \
+         m_pixBlock.image.ysize != vmode.getResolutionY() || \
+         m_pixelFormat != vmode.getPixelFormat() )
+    {
+      m_pixBlock.image.xsize = vmode.getResolutionX();
+      m_pixBlock.image.ysize = vmode.getResolutionY();
+      m_pixelFormat = vmode.getPixelFormat();
+      
+      if ( m_pixelFormat == PIXEL_FORMAT_GRAY8){
+        m_pixBlock.image.csize = 1;
+      } else {
+        m_pixBlock.image.csize = 4;
+      }
+      
+      m_pixBlock.image.reallocate();
+      state->set(GemState::_PIX, &m_pixBlock);
+    }
+    
+    m_pixBlock.newimage=true;
+    
+    unsigned char *data = (unsigned char *) m_videoFrameRef.getData();
+    
+    unsigned char *pixels=m_pixBlock.image.data;
+    int size = m_pixBlock.image.xsize * m_pixBlock.image.ysize;
+    
+    int step;
+    switch ( vmode.getPixelFormat() ){
+      case PIXEL_FORMAT_RGB888:
+        m_pixBlock.image.fromRGB(data);
+        m_pixBlock.image.notowned=0;
+        break;
+      case PIXEL_FORMAT_GRAY8:
+        m_pixBlock.image.data=data;
+        m_pixBlock.image.notowned=1;
+        break;
+      case PIXEL_FORMAT_GRAY16:
+        while ( size-- ){
+          pixels[chRed]=*data++;
+          pixels[chGreen]=*data++;
+          pixels[chBlue]=0;
+          pixels[chAlpha]=255;
+          pixels+=4;
+        }
+        m_pixBlock.image.notowned=0;
+        break;
+    }
+  } else {
+    m_pixBlock.newimage=false;
+  }
+}
+
+void pix_openni :: startRendering(){
+  //~if (m_rgb){
+
+}
+
+void DepthChannel :: startRendering(){
+  if (*m_depthPt){
+    Status rc = STATUS_OK;
+    rc = m_videoStream.create(*m_devicePt, SENSOR_DEPTH);
+    //~t_atom a_status;
+    
+    if ( rc != STATUS_OK ){
+      error("can't create depth stream : %s", OpenNI::getExtendedError());
+      //~SETFLOAT(&a_status, rc);
+      //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
+      return;
+    }
+    
+    rc = m_videoStream.start();
+    if ( rc != STATUS_OK ){
+      error("can't start depth stream : %s", OpenNI::getExtendedError());
+      //~SETFLOAT(&a_status, rc);
+      //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
+      return;
+    }
+    m_videoStream.addNewFrameListener(m_frameListener);
   }
 }
 
 void pix_openni :: stopRendering(){
+}
+
+void DepthChannel :: stopRendering(){
 }

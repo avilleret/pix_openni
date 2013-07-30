@@ -39,22 +39,14 @@ LOG
 
 
 
-//~#include <stdio.h>
-//~#include <stdlib.h>
-//~#include <string.h>
-//#include <assert.h>
-//~#include <iomanip>
-//#include <cmath>
-//~#include <vector>
-//~#include <stdint.h>
+#include <sstream>
+#include <iomanip>
 
 #include <OpenNI.h>
 
 #include "Base/GemBase.h"
 #include "Gem/Exception.h"
-//~#include "Gem/Properties.h"
 #include "Gem/State.h"
-//~#include "Gem/Image.h"
 #include "Base/GemPixObj.h"
 #include "RTE/MessageCallbacks.h"
 
@@ -73,7 +65,8 @@ DESCRIPTION
 * based on Matthias Kronlachner's pix_openni
    
 -----------------------------------------------------------------*/
-class FrameListener; 
+class FrameListener;
+class DepthChannel;
 
 #ifdef _WIN32
 class GEM_EXPORT pix_openni : public GemBase
@@ -92,43 +85,70 @@ public:
   
   bool m_rgb, m_ir, m_depth;
   
-  FrameListener *m_rgbListener, *m_depthListener;
-  VideoFrameRef m_rgbFrame, m_depthFrame;
+  FrameListener *m_frameListener;
+  VideoFrameRef m_videoFrameRef;
   
   //~ pix_block where the pixels are
-  pixBlock m_rgbPix, m_depthPix;
+  pixBlock m_pixBlock;
   
-  VideoStream m_rgbStream, m_depthStream;  
-  PixelFormat m_rgbPixFormat, m_depthPixFormat;
+  VideoStream m_videoStream;  
+  PixelFormat m_pixelFormat;
+  
+  DepthChannel *m_depthChannel;
   
 protected:
 
   virtual ~pix_openni();
 
-  virtual void	startRendering();
+  virtual void  startRendering();
   virtual void  stopRendering();
-  virtual void 	render(GemState *state);
-  void  renderDepth(t_symbol *s,int argc, t_atom*argv);
+  virtual void  render(GemState *state);
   
   void  enumerateMess();
   void  openMess(t_symbol *s,int argc, t_atom*argv);
+  void  openBySerialMess(t_symbol *s,int argc, t_atom*argv);
   void  closeMess();
   void  rgbMess(t_float f);
   void  irMess(t_float f);
   void  depthMess(t_float f);
+  void  getVideoMode();
+  void  setVideoMode(t_symbol *s_videomode);
   
 private:
+
+  static void gem_depthMessCallback(void *data, t_symbol *s, int argc, t_atom *argv);
+
   t_outlet  *m_depthoutlet;
   t_outlet  *m_dataout;
-  t_inlet   *m_depthinlet;
 }; 
 
-class FrameListener : public VideoStream::NewFrameListener
+class GEM_EXTERN DepthChannel : public GemBase
 {
+  CPPEXTERN_HEADER(DepthChannel, GemBase);
+  
 public:
-  FrameListener();
-  void onNewFrame(VideoStream& stream);
-  void unSet();
-  unsigned int m_newFrame;
-}; 
+  DepthChannel();
+  ~DepthChannel();
+  
+  virtual void	startRendering();
+  virtual void  stopRendering();
+  virtual void 	render(GemState *state);
+  
+  Device *m_devicePt;
+  bool *m_depthPt;
+
+private:
+  
+  FrameListener *m_frameListener;
+  VideoFrameRef m_videoFrameRef;
+  
+  //~ pix_block where the pixels are
+  pixBlock m_pixBlock;
+  
+  VideoStream m_videoStream;  
+  PixelFormat m_pixelFormat;
+  
+  t_inlet   *m_depthinlet;
+  
+};
 #endif	// for header file
