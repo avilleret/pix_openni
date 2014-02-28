@@ -87,20 +87,6 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
   OpenNI::addDeviceConnectedListener(this);
   OpenNI::addDeviceDisconnectedListener(this);
   OpenNI::addDeviceStateChangedListener(this);
-   
-   // initialize OpenNI
-   Status rc = STATUS_OK;
-   
-   rc = OpenNI::initialize();
-   if ( rc != STATUS_OK ){
-      error("can't initialized OpenNI : %s", OpenNI::getExtendedError());
-#ifdef __linux__
-      error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
-#endif
-      throw(GemException("OpenNI Init() failed\n"));
-   }
-   
-   post("pix_openni2 by Antoine Villeret based on Matthias Kronlachner work, build on %s at %s", __DATE__, __TIME__);
 }
 
 // Destructor
@@ -108,7 +94,7 @@ pix_openni2 :: ~pix_openni2(){
   closeMess();
   delete(m_frameListener);
   delete(m_depthChannel);
-  OpenNI::shutdown();
+  //~ OpenNI::shutdown(); // this should be called only on Pd quit
 }
 
 void pix_openni2 :: obj_setupCallback(t_class *classPtr)
@@ -122,6 +108,21 @@ void pix_openni2 :: obj_setupCallback(t_class *classPtr)
   CPPEXTERN_MSG1(classPtr, "ir", irMess, t_float);
   CPPEXTERN_MSG0(classPtr, "getVideoMode", getVideoMode);
   CPPEXTERN_MSG1(classPtr, "setVideoMode", setVideoMode, t_symbol*);
+  
+  printf("pix_openni2 by Antoine Villeret based on Matthias Kronlachner work, build on %s at %s\n", __DATE__, __TIME__);
+  
+     // initialize OpenNI
+   Status rc = STATUS_OK;
+   rc = OpenNI::initialize();
+   if ( rc != STATUS_OK ){
+      printf("can't initialized OpenNI : %s\n", OpenNI::getExtendedError());
+#ifdef __linux__
+      printf("this often happens when drivers are not reachable (in /usr/lib or near this external)\n");
+#endif
+      throw(GemException("OpenNI Init() failed\n"));
+   }
+   
+   
 }
 
 void DepthChannel :: obj_setupCallback(t_class *classPtr)
