@@ -86,7 +86,7 @@ public:
   Device m_device;
   const char *m_deviceURI;
   
-  bool m_rgb, m_ir, m_depth;
+  bool m_rgb, m_ir, m_depth, m_connected;
   
   FrameListener *m_frameListener;
   VideoFrameRef m_videoFrameRef;

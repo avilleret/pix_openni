@@ -70,6 +70,7 @@ CPPEXTERN_NEW_WITH_GIMME(pix_openni2);
 pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
                                                    m_rgb(0), \
                                                    m_ir(0), \
+                                                   m_connected(false), \
                                                    m_depth(0)
 {
    
@@ -266,6 +267,8 @@ m_deviceURI=ANY_DEVICE;
   if ( rc != STATUS_OK ){
     error("can't open device %s : %s", m_deviceURI, OpenNI::getExtendedError());
     return;
+  } else {
+	  m_connected = true;
   }
   
   char serial[512]; 
@@ -315,6 +318,7 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
           m_deviceURI=ANY_DEVICE;
         } else {
           verbose(4, "device with serial %s is open", a_serial);
+          m_connected=true;
           t_atom a_status;
           SETFLOAT(&a_status,rc);
           outlet_anything(m_dataout, gensym("open"), 1, &a_status);
@@ -328,6 +332,7 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
 
 // Close the device/file
 void pix_openni2 :: closeMess(){
+  m_connected=false;
   m_videoStream.removeNewFrameListener(m_frameListener);
   m_videoStream.stop();
   m_videoStream.destroy();
@@ -377,6 +382,10 @@ void pix_openni2 :: setVideoMode(t_symbol *s_videoMode){
 void pix_openni2 :: render(GemState *state){
   Status rc = STATUS_OK;
   
+  if ( !m_connected ){
+	  error("no device opened");
+	  return;
+  }
   if ( !m_device.isValid() ){
 	post("open device with URI : %s", m_deviceURI);
 	Status rc = STATUS_OK;
