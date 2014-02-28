@@ -37,7 +37,7 @@
 *****************************************************************************/
 
 
-#include "pix_openni.h"
+#include "pix_openni2.h"
 
 class FrameListener : public VideoStream::NewFrameListener
 {
@@ -64,10 +64,10 @@ DepthChannel :: ~DepthChannel(){
   delete(m_frameListener);
 }
 
-CPPEXTERN_NEW_WITH_GIMME(pix_openni);
+CPPEXTERN_NEW_WITH_GIMME(pix_openni2);
 
 // Constructor
-pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
+pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
                                                    m_rgb(0), \
                                                    m_ir(0), \
                                                    m_depth(0)
@@ -94,17 +94,19 @@ pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
 #endif
       throw(GemException("OpenNI Init() failed\n"));
    }
+   
+   post("pix_openni2 by Antoine Villeret based on Matthias Kronlachner work, build on %s at %s", __DATE__, __TIME__);
 }
 
 // Destructor
-pix_openni :: ~pix_openni(){
+pix_openni2 :: ~pix_openni2(){
   closeMess();
   delete(m_frameListener);
   delete(m_depthChannel);
   OpenNI::shutdown();
 }
 
-void pix_openni :: obj_setupCallback(t_class *classPtr)
+void pix_openni2 :: obj_setupCallback(t_class *classPtr)
 {
   CPPEXTERN_MSG0(classPtr, "enumerate", enumerateMess);
   CPPEXTERN_MSG (classPtr, "open", openMess);
@@ -122,7 +124,7 @@ void DepthChannel :: obj_setupCallback(t_class *classPtr)
   //~CPPEXTERN_MSG (classPtr, "depth_state", renderDepth);
 }
 
-void pix_openni :: enumerateMess(){
+void pix_openni2 :: enumerateMess(){
    
   Array<openni::DeviceInfo> deviceList;
   OpenNI::enumerateDevices(&deviceList);
@@ -163,7 +165,7 @@ void pix_openni :: enumerateMess(){
 }
 
 // enable/disable rgb grabbing
-void pix_openni :: rgbMess(t_float f){
+void pix_openni2 :: rgbMess(t_float f){
   if ( !m_device.isValid() ){
     error("please open a device before...");
     return;
@@ -184,7 +186,7 @@ void pix_openni :: rgbMess(t_float f){
 }
 
 // enable/diasable ir grabbing
-void pix_openni :: irMess(t_float f){
+void pix_openni2 :: irMess(t_float f){
   if ( !m_device.isValid() ){
     error("please open a device before...");
     return;
@@ -204,7 +206,7 @@ void pix_openni :: irMess(t_float f){
 }
 
 // enable/disable depth grabbing
-void pix_openni :: depthMess(t_float f){
+void pix_openni2 :: depthMess(t_float f){
   if ( !m_device.isValid() ){
     error("please open a device before...");
     return;
@@ -225,17 +227,33 @@ void pix_openni :: depthMess(t_float f){
 
 // Open a device/file by its URI
 // one argument : symbol (URI)
-void pix_openni :: openMess(t_symbol *s,int argc, t_atom*argv){   
+void pix_openni2 :: openMess(t_symbol *s,int argc, t_atom*argv){   
+int deviceId = -1;
+m_deviceURI=ANY_DEVICE;
+
   if (argc>0){
     if (argv->a_type == A_SYMBOL){
       m_deviceURI=atom_getsymbol(argv)->s_name;
-    }
-  } else {
-    m_deviceURI=ANY_DEVICE;
+    } else if (argv->a_type == A_FLOAT) {
+		int arg = atom_getint(argv);
+		deviceId = arg>-1 ? arg : -1;
+	}
+  }
+  
+  if ( deviceId > -1 ){
+	Array<openni::DeviceInfo> deviceList;
+	OpenNI::enumerateDevices(&deviceList);
+	if ( deviceId > deviceList.getSize()-1 ){
+		error("id %d is out of device list (%d)", deviceId,deviceList.getSize());
+	} else {
+		m_deviceURI=deviceList[deviceId].getUri();
+	}
   }
   
   Status rc = STATUS_OK;
-  verbose(4, "open device with URI %s", m_deviceURI);
+  post("open device with URI %s", m_deviceURI);
+  m_device.close();
+  
   rc = m_device.open(m_deviceURI);
   t_atom a_status;
   SETFLOAT(&a_status, rc);
@@ -257,7 +275,7 @@ void pix_openni :: openMess(t_symbol *s,int argc, t_atom*argv){
 }
 
 // OpenBySerial : open a device thanks to its serial
-void pix_openni :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
+void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
   if ( argc < 1 ){
     error("openBySerial message needs one symbol argument");
     return;
@@ -304,14 +322,14 @@ void pix_openni :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
 }
 
 // Close the device/file
-void pix_openni :: closeMess(){
+void pix_openni2 :: closeMess(){
   m_videoStream.removeNewFrameListener(m_frameListener);
   m_videoStream.stop();
   m_videoStream.destroy();
   m_device.close();
 }
 
-void pix_openni :: getVideoMode(){
+void pix_openni2 :: getVideoMode(){
     printf("getVideoMode\n");
 
   if ( !m_device.isValid() ){
@@ -347,16 +365,23 @@ void pix_openni :: getVideoMode(){
   }
 }
 
-void pix_openni :: setVideoMode(t_symbol *s_videoMode){
+void pix_openni2 :: setVideoMode(t_symbol *s_videoMode){
   std::string str_videoMode = std::string(s_videoMode->s_name);
 }
 
-void pix_openni :: render(GemState *state){
+void pix_openni2 :: render(GemState *state){
   Status rc = STATUS_OK;
   
   if ( !m_device.isValid() ){
-    m_device.open(m_deviceURI);
-  } else if ( !m_videoStream.isValid() ){
+	post("open device with URI : %s", m_deviceURI);
+	Status rc = STATUS_OK;
+    rc = m_device.open(m_deviceURI);
+    if ( rc != STATUS_OK ){
+      error("can't create rgb stream : %s", OpenNI::getExtendedError());
+    }
+  } 
+  
+  if ( !m_videoStream.isValid() ){
     Status rc = STATUS_OK;
     rc = m_videoStream.create(m_device, SENSOR_DEPTH); // force only depth output for now
     //~t_atom a_status;
@@ -512,7 +537,7 @@ void DepthChannel :: render(GemState *state){
   }
 }
 
-void pix_openni :: startRendering(){
+void pix_openni2 :: startRendering(){
   //~if (m_rgb){
 
 }
@@ -541,7 +566,7 @@ void DepthChannel :: startRendering(){
   }
 }
 
-void pix_openni :: stopRendering(){
+void pix_openni2 :: stopRendering(){
 }
 
 void DepthChannel :: stopRendering(){

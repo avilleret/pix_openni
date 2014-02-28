@@ -1,8 +1,5 @@
 # change to your local directories!
-PD_APP_DIR =  /home/antoine/pd/pd
-GEM_DIR = /home/antoine/pd/Gem
-OPENNI_DIR=/home/antoine/kinect/version_2/OpenNI-Linux-x64-2.2
-
+OPENNI_DIR=/home/nusmuk/kinect/OpenNI-Linux-x64-2.2
 
 #linux doesnt work yet
 UNAME := $(shell uname -s)
@@ -26,7 +23,7 @@ endif
 
 .SUFFIXES = $(EXTENSION)
 
-SOURCES = pix_openni
+SOURCES = pix_openni2
 
 all:
 	g++ $(CPPFLAGS) $(CXXFLAGS) -o $(SOURCES).o -c $(SOURCES).cc

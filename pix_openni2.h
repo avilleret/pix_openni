@@ -34,8 +34,8 @@ LOG
 *                                                                            *
 *****************************************************************************/
 
-#ifndef INCLUDE_pix_openni_H_
-#define INCLUDE_pix_openni_H_
+#ifndef INCLUDE_pix_openni2_H_
+#define INCLUDE_pix_openni2_H_
 
 
 
@@ -54,7 +54,7 @@ using namespace openni;
 /*-----------------------------------------------------------------
 -------------------------------------------------------------------
 CLASS
-    pix_openni
+    pix_openni2
     
 
 KEYWORDS
@@ -62,23 +62,23 @@ KEYWORDS
     
 DESCRIPTION
 * New OpenNI 2.x implementation for pure-data
-* based on Matthias Kronlachner's pix_openni
+* based on Matthias Kronlachner's pix_openni2
    
 -----------------------------------------------------------------*/
 class FrameListener;
 class DepthChannel;
 
 #ifdef _WIN32
-class GEM_EXPORT pix_openni : public GemBase
+class GEM_EXPORT pix_openni2 : public GemBase
 #else
-class GEM_EXTERN pix_openni : public GemBase
+class GEM_EXTERN pix_openni2 : public GemBase
 #endif
 {
-  CPPEXTERN_HEADER(pix_openni, GemBase);
+  CPPEXTERN_HEADER(pix_openni2, GemBase);
 
 public:
 
- 	pix_openni(int argc, t_atom *argv);
+ 	pix_openni2(int argc, t_atom *argv);
   
   Device m_device;
   const char *m_deviceURI;
@@ -98,7 +98,7 @@ public:
   
 protected:
 
-  virtual ~pix_openni();
+  virtual ~pix_openni2();
 
   virtual void  startRendering();
   virtual void  stopRendering();
