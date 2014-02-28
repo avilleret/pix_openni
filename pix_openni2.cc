@@ -233,25 +233,33 @@ void pix_openni2 :: depthMess(t_float f){
 // Open a device/file by its URI
 // one argument : symbol (URI)
 void pix_openni2 :: openMess(t_symbol *s,int argc, t_atom*argv){   
-int deviceId = -1;
-m_deviceURI=ANY_DEVICE;
+  int deviceId = -1;
 
   if (argc>0){
     if (argv->a_type == A_SYMBOL){
       m_deviceURI=atom_getsymbol(argv)->s_name;
     } else if (argv->a_type == A_FLOAT) {
-		int arg = atom_getint(argv);
-		deviceId = arg>-1 ? arg : -1;
+	  int arg = atom_getint(argv);
+	  deviceId = arg>-1 ? arg : -1;
 	}
   }
   
+  Array<openni::DeviceInfo> deviceList;
+  OpenNI::enumerateDevices(&deviceList);
+	
   if ( deviceId > -1 ){
-	Array<openni::DeviceInfo> deviceList;
-	OpenNI::enumerateDevices(&deviceList);
 	if ( deviceId > deviceList.getSize()-1 ){
 		error("id %d is out of device list (%d)", deviceId,deviceList.getSize());
+		return;
 	} else {
 		m_deviceURI=deviceList[deviceId].getUri();
+	}
+  } else if ( m_deviceURI != ANY_DEVICE ){
+	for (int i=0; i< deviceList.getSize();i++){
+	  if ( std::string(m_deviceURI) == std::string(deviceList[i].getUri()) ){
+		  m_deviceURI=deviceList[i].getUri();
+		  continue;
+	  }
 	}
   }
   
