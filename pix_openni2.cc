@@ -250,9 +250,10 @@ m_deviceURI=ANY_DEVICE;
 	}
   }
   
+  closeMess();
+  
   Status rc = STATUS_OK;
   post("open device with URI %s", m_deviceURI);
-  m_device.close();
   
   rc = m_device.open(m_deviceURI);
   t_atom a_status;
