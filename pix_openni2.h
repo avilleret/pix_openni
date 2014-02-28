@@ -137,9 +137,9 @@ public:
   DepthChannel();
   ~DepthChannel();
   
-  virtual void	startRendering();
-  virtual void  stopRendering();
-  virtual void 	render(GemState *state);
+  virtual void startRendering();
+  virtual void stopRendering();
+  virtual void render(GemState *state);
   
   Device *m_devicePt;
   bool *m_depthPt;

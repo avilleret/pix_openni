@@ -79,7 +79,7 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
   m_depthChannel->m_devicePt = &m_device;
   m_depthChannel->m_depthPt = &m_depth;
 
-	m_dataout = outlet_new(this->x_obj, 0);
+  m_dataout = outlet_new(this->x_obj, 0);
   
   m_frameListener = new FrameListener;
   
