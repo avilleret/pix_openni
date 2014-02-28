@@ -82,6 +82,10 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
 	m_dataout = outlet_new(this->x_obj, 0);
   
   m_frameListener = new FrameListener;
+  
+  OpenNI::addDeviceConnectedListener(this);
+  OpenNI::addDeviceDisconnectedListener(this);
+  OpenNI::addDeviceStateChangedListener(this);
    
    // initialize OpenNI
    Status rc = STATUS_OK;
@@ -571,4 +575,26 @@ void pix_openni2 :: stopRendering(){
 }
 
 void DepthChannel :: stopRendering(){
+}
+
+void pix_openni2 :: onDeviceStateChanged(const DeviceInfo* pInfo, DeviceState state) 
+{
+  printf("Device \"%s\" error state changed to %d\n", pInfo->getUri(), state);
+}
+
+void pix_openni2 :: onDeviceConnected(const DeviceInfo* pInfo)
+{
+  printf("Device \"%s\" connected\n", pInfo->getUri());
+}
+
+void pix_openni2 :: onDeviceDisconnected(const DeviceInfo* pInfo)
+{
+  const char * uri = pInfo->getUri();
+  printf("Device \"%s\" disconnected\n", uri);
+  printf("m_deviceURI : %s\n", m_deviceURI);
+  printf("deviceANY : %s\n", ANY_DEVICE);
+  if ( strcmp(uri,m_deviceURI)==0 ){
+	printf("call close device\n");
+	m_connected = false;
+  }
 }
