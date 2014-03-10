@@ -67,7 +67,7 @@ DESCRIPTION
 -----------------------------------------------------------------*/
 class FrameListener;
 class DepthChannel;
-
+  
 #ifdef _WIN32
 class GEM_EXPORT pix_openni2 : public GemBase
 #else
@@ -84,7 +84,8 @@ public:
  	pix_openni2(int argc, t_atom *argv);
   
   Device m_device;
-  const char *m_deviceURI;
+  const char *m_deviceURIptr;
+  char m_deviceURI[1024];
   
   bool m_rgb, m_ir, m_depth, m_connected;
   

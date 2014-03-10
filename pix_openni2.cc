@@ -67,7 +67,7 @@ DepthChannel :: ~DepthChannel(){
 CPPEXTERN_NEW_WITH_GIMME(pix_openni2);
 
 // Constructor
-pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
+pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURIptr(ANY_DEVICE), \
                                                    m_rgb(0), \
                                                    m_ir(0), \
                                                    m_connected(false), \
@@ -94,7 +94,7 @@ pix_openni2 :: ~pix_openni2(){
   closeMess();
   delete(m_frameListener);
   delete(m_depthChannel);
-  //~ OpenNI::shutdown(); // this should be called only on Pd quit
+  //~ OpenNI::shutdown(); // this should be called only on Pd quit, but I don't know how !
 }
 
 void pix_openni2 :: obj_setupCallback(t_class *classPtr)
@@ -152,16 +152,19 @@ void pix_openni2 :: enumerateMess(){
     
     Device device;
     char serial[512];
+    serial[0]='\0';
     int datasize=sizeof(serial);
 
     if ( device.open(deviceList[i].getUri()) == STATUS_OK ){
       if ( device.getProperty(ONI_DEVICE_PROPERTY_SERIAL_NUMBER, &serial, &datasize) == STATUS_OK ){
         SETSYMBOL(a_deviceInfo+5, gensym(serial));
       } else {
-        SETSYMBOL(a_deviceInfo+5, gensym(deviceList[i].getUri()));
+		error("can't get serial, put URI instead");
+        SETSYMBOL(a_deviceInfo+5, gensym( deviceList[i].getUri()));
       }
       device.close();
     } else {
+	  error("can't open device, put URI instead");
       SETSYMBOL(a_deviceInfo+5, gensym(deviceList[i].getUri()));
     }
 
@@ -238,12 +241,16 @@ void pix_openni2 :: openMess(t_symbol *s,int argc, t_atom*argv){
 
   if (argc>0){
     if (argv->a_type == A_SYMBOL){
-      m_deviceURI=atom_getsymbol(argv)->s_name;
+      strcpy(m_deviceURI,atom_getsymbol(argv)->s_name);
+      m_deviceURIptr = (const char *) &m_deviceURI;
     } else if (argv->a_type == A_FLOAT) {
 	  int arg = atom_getint(argv);
 	  deviceId = arg>-1 ? arg : -1;
 	}
+  } else {
+    m_deviceURIptr = ANY_DEVICE;
   }
+
   
   Array<openni::DeviceInfo> deviceList;
   OpenNI::enumerateDevices(&deviceList);
@@ -253,13 +260,15 @@ void pix_openni2 :: openMess(t_symbol *s,int argc, t_atom*argv){
 		error("id %d is out of device list (%d)", deviceId,deviceList.getSize());
 		return;
 	} else {
-		m_deviceURI=deviceList[deviceId].getUri();
+		strcpy(m_deviceURI,deviceList[deviceId].getUri());
+		m_deviceURIptr = (const char *) &m_deviceURI;
 	}
-  } else if ( m_deviceURI != ANY_DEVICE ){
+  } else if ( m_deviceURIptr != ANY_DEVICE ){
 	for (int i=0; i< deviceList.getSize();i++){
-	  if ( std::string(m_deviceURI) == std::string(deviceList[i].getUri()) ){
-		  m_deviceURI=deviceList[i].getUri();
-		  continue;
+	  if ( std::string(m_deviceURIptr) == std::string(deviceList[i].getUri()) ){
+		  strcpy(m_deviceURI,deviceList[i].getUri());
+  		  m_deviceURIptr = (const char *) &m_deviceURI;
+		  break;
 	  }
 	}
   }
@@ -269,7 +278,7 @@ void pix_openni2 :: openMess(t_symbol *s,int argc, t_atom*argv){
   Status rc = STATUS_OK;
   post("open device with URI %s", m_deviceURI);
   
-  rc = m_device.open(m_deviceURI);
+  rc = m_device.open(m_deviceURIptr);
   t_atom a_status;
   SETFLOAT(&a_status, rc);
   outlet_anything(m_dataout, gensym("open"), 1, &a_status);
@@ -315,18 +324,25 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
   for(i=0; i<deviceList.getSize(); i++){
     Device device;
     Status rc = STATUS_OK;
+    
+    
+      printf("device %04x %04x\n",deviceList[i].getUsbProductId(), deviceList[i].getUsbVendorId());
+      
     rc=device.open(deviceList[i].getUri());
     if ( rc == STATUS_OK ){
       char serial[512]; 
       int datasize=sizeof(serial);
+      
       rc=device.getProperty(ONI_DEVICE_PROPERTY_SERIAL_NUMBER, &serial, &datasize);
       device.close();
       if( rc == STATUS_OK && std::string(a_serial) == std::string(serial) ){
-        m_deviceURI=deviceList[i].getUri();
+        strcpy(m_deviceURI,deviceList[i].getUri());
+        m_deviceURIptr = (const char *) &m_deviceURI;
+ 
         if (m_device.isValid()) closeMess();
-        rc=m_device.open(m_deviceURI);
+        rc=m_device.open(m_deviceURIptr);
         if( rc != STATUS_OK ){
-          m_deviceURI=ANY_DEVICE;
+		  error("can't open device %s", m_deviceURI);
         } else {
           verbose(4, "device with serial %s is open", a_serial);
           m_connected=true;
@@ -394,17 +410,9 @@ void pix_openni2 :: render(GemState *state){
   Status rc = STATUS_OK;
   
   if ( !m_connected ){
-	  error("no device opened");
+	  //~ error("no device opened");
 	  return;
   }
-  if ( !m_device.isValid() ){
-	post("open device with URI : %s", m_deviceURI);
-	Status rc = STATUS_OK;
-    rc = m_device.open(m_deviceURI);
-    if ( rc != STATUS_OK ){
-      error("can't create rgb stream : %s", OpenNI::getExtendedError());
-    }
-  } 
   
   if ( !m_videoStream.isValid() ){
     Status rc = STATUS_OK;
@@ -612,7 +620,6 @@ void pix_openni2 :: onDeviceDisconnected(const DeviceInfo* pInfo)
   const char * uri = pInfo->getUri();
   printf("Device \"%s\" disconnected\n", uri);
   printf("m_deviceURI : %s\n", m_deviceURI);
-  printf("deviceANY : %s\n", ANY_DEVICE);
   if ( strcmp(uri,m_deviceURI)==0 ){
 	printf("call close device\n");
 	m_connected = false;
