@@ -307,6 +307,8 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
 
   a_serial=argv[0].a_w.w_symbol->s_name;
   
+  if ( a_serial[0] == '@' ) a_serial++;
+  
   Array<openni::DeviceInfo> deviceList;
   OpenNI::enumerateDevices(&deviceList);
   int i;
