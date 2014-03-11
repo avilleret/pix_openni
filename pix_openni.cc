@@ -70,7 +70,8 @@ CPPEXTERN_NEW_WITH_GIMME(pix_openni);
 pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
                                                    m_rgb(0), \
                                                    m_ir(0), \
-                                                   m_depth(0)
+                                                   m_depth(0), \
+                                                   m_confidenceThreshold(0.1)
 {
    
 	//~m_depthinlet  = inlet_new(this->x_obj, &this->x_obj->ob_pd, gensym("gem_state"), gensym("depth_state"));
@@ -82,18 +83,35 @@ pix_openni :: pix_openni(int argc, t_atom *argv) : m_deviceURI(ANY_DEVICE), \
 	m_dataout = outlet_new(this->x_obj, 0);
   
   m_frameListener = new FrameListener;
+  
+  for ( int i=0;i<MAX_USERS;i++){
+    m_visibleUsers[i]= false;
+    m_skeletonStates[i] = nite::SKELETON_NONE;
+  }
    
    // initialize OpenNI
    Status rc = STATUS_OK;
    
    rc = OpenNI::initialize();
    if ( rc != STATUS_OK ){
-      error("can't initialized OpenNI : %s", OpenNI::getExtendedError());
+     error("can't initialized OpenNI : %s", OpenNI::getExtendedError());
 #ifdef __linux__
-      error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
+     error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
 #endif
-      throw(GemException("OpenNI Init() failed\n"));
+     throw(GemException("OpenNI initialization failed\n"));
    }
+   
+   rc = nite::NiTE::initialize();
+  if ( rc != STATUS_OK ){
+    error("can't initialized NiTE : %s", OpenNI::getExtendedError());
+#ifdef __linux__
+    error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
+#endif
+    throw(GemException("NiTE initialization failed\n"));
+  } else {  
+    nite::Version version = nite::NiTE::getVersion();
+    post("NiTE version %d.%d-%d initialized\n", version.major, version.minor, version.maintenance);
+  }
 }
 
 // Destructor
@@ -102,6 +120,7 @@ pix_openni :: ~pix_openni(){
   delete(m_frameListener);
   delete(m_depthChannel);
   OpenNI::shutdown();
+  nite::NiTE::shutdown();
 }
 
 void pix_openni :: obj_setupCallback(t_class *classPtr)
@@ -115,6 +134,7 @@ void pix_openni :: obj_setupCallback(t_class *classPtr)
   CPPEXTERN_MSG1(classPtr, "ir", irMess, t_float);
   CPPEXTERN_MSG0(classPtr, "getVideoMode", getVideoMode);
   CPPEXTERN_MSG1(classPtr, "setVideoMode", setVideoMode, t_symbol*);
+  //~CPPEXTERN_MSG1(classPtr, "confidenceThreshold", confidenceThreshold, t_float);
 }
 
 void DepthChannel :: obj_setupCallback(t_class *classPtr)
@@ -356,26 +376,39 @@ void pix_openni :: render(GemState *state){
   
   if ( !m_device.isValid() ){
     m_device.open(m_deviceURI);
-  } else if ( !m_videoStream.isValid() ){
-    Status rc = STATUS_OK;
-    rc = m_videoStream.create(m_device, SENSOR_DEPTH); // force only depth output for now
-    //~t_atom a_status;
-    
-    if ( rc != STATUS_OK ){
-      error("can't create rgb stream : %s", OpenNI::getExtendedError());
-      //~SETFLOAT(&a_status, rc);
-      //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
-      return;
+  } else {
+    if ( !m_videoStream.isValid() ){
+      Status rc = STATUS_OK;
+      rc = m_videoStream.create(m_device, SENSOR_DEPTH); // force only depth output for now
+      //~t_atom a_status;
+      
+      if ( rc != STATUS_OK ){
+        error("can't create rgb stream : %s", OpenNI::getExtendedError());
+        //~SETFLOAT(&a_status, rc);
+        //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
+        return;
+      }
+      
+      rc = m_videoStream.start();
+      if ( rc != STATUS_OK ){
+        error("can't start rgb stream : %s", OpenNI::getExtendedError());
+        //~SETFLOAT(&a_status, rc);
+        //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
+        return;
+      }
+      m_videoStream.addNewFrameListener(m_frameListener);
     }
     
-    rc = m_videoStream.start();
-    if ( rc != STATUS_OK ){
-      error("can't start rgb stream : %s", OpenNI::getExtendedError());
-      //~SETFLOAT(&a_status, rc);
-      //~outlet_anything(m_dataout, gensym("rgb"), 1, &a_status);
-      return;
+    if ( !m_userTracker.isValid() ){
+      Status niteRc;
+      niteRc = m_userTracker.create();
+      if (niteRc != nite::STATUS_OK)
+      {
+        error("Couldn't create user tracker\n");
+      } else {
+        post("user tracker created !!");
+      }
     }
-    m_videoStream.addNewFrameListener(m_frameListener);
   }
   
   if ( m_frameListener->m_newFrame && m_device.isValid() && m_videoStream.isValid() ){
@@ -441,6 +474,81 @@ void pix_openni :: render(GemState *state){
   } else {
     m_pixBlock.newimage=false;
     state->set(GemState::_PIX, &m_pixBlock);
+  }
+  
+  
+  if ( m_userTracker.isValid()) {
+    // get user tracking data
+    Status niteRc = m_userTracker.readFrame(&m_userTrackerFrame);
+    
+    const nite::Array<nite::UserData>& users = m_userTrackerFrame.getUsers();
+    
+    int userNumber=0;
+    for (int i = 0; i < users.getSize(); ++i)
+    {
+      const nite::UserData& user = users[i];
+      if (user.getSkeleton().getState() == nite::SKELETON_TRACKED) userNumber++;
+    }
+
+    t_atom a_userNumber;
+    SETFLOAT(&a_userNumber, userNumber);
+    outlet_anything(m_dataout, gensym("users"), 1, &a_userNumber);
+    for (int i = 0; i < users.getSize(); ++i)
+    {
+      const nite::UserData& user = users[i];
+      updateUserState(user,m_userTrackerFrame.getTimestamp());
+      if (user.isNew())
+      {
+        m_userTracker.startSkeletonTracking(user.getId());
+      }
+      else if (user.getSkeleton().getState() == nite::SKELETON_TRACKED)
+      {
+        
+        // TODO clean this : make a loop over selected joints
+        
+        int depthMax = m_videoStream.getMaxPixelValue();
+        int depthMin = m_videoStream.getMinPixelValue();
+        
+        const nite::SkeletonJoint& head = user.getSkeleton().getJoint(nite::JOINT_TORSO);
+        if (head.getPositionConfidence() > m_confidenceThreshold){
+          //~printf("%d. (%5.2f, %5.2f, %5.2f)\n", user.getId(), head.getPosition().x, head.getPosition().y, head.getPosition().z);
+          float x,y,z;
+          CoordinateConverter::convertWorldToDepth(m_videoStream,head.getPosition().x,head.getPosition().y,head.getPosition().z, &x,&y,&z);
+          t_atom a_userData[4];
+          SETFLOAT(a_userData, user.getId());
+          SETFLOAT(a_userData+1, x/m_pixBlock.image.xsize);
+          SETFLOAT(a_userData+2, y/m_pixBlock.image.ysize);
+          SETFLOAT(a_userData+3, (z-depthMin)/(depthMax-depthMin));
+          outlet_anything(m_dataout, gensym("torso"), 4, a_userData);
+        }
+        
+        const nite::SkeletonJoint& leftHand = user.getSkeleton().getJoint(nite::JOINT_LEFT_HAND);
+        if (leftHand.getPositionConfidence() > m_confidenceThreshold){
+          //~printf("%d. (%5.2f, %5.2f, %5.2f)\n", user.getId(), leftHand.getPosition().x, leftHand.getPosition().y, leftHand.getPosition().z);
+          float x,y,z;
+          CoordinateConverter::convertWorldToDepth(m_videoStream,leftHand.getPosition().x,leftHand.getPosition().y,leftHand.getPosition().z, &x,&y,&z);
+          t_atom a_userData[4];
+          SETFLOAT(a_userData, user.getId());
+          SETFLOAT(a_userData+1, x/m_pixBlock.image.xsize);
+          SETFLOAT(a_userData+2, y/m_pixBlock.image.ysize);
+          SETFLOAT(a_userData+3, (z-depthMin)/(depthMax-depthMin));
+          outlet_anything(m_dataout, gensym("left_hand"), 4, a_userData);
+        }
+        
+        const nite::SkeletonJoint& rightHand = user.getSkeleton().getJoint(nite::JOINT_RIGHT_HAND);
+        if (rightHand.getPositionConfidence() > m_confidenceThreshold){
+          //~printf("%d. (%5.2f, %5.2f, %5.2f)\n", user.getId(), rightHand.getPosition().x, rightHand.getPosition().y, rightHand.getPosition().z
+          float x,y,z;
+          CoordinateConverter::convertWorldToDepth(m_videoStream,rightHand.getPosition().x,rightHand.getPosition().y,rightHand.getPosition().z, &x,&y,&z);
+          t_atom a_userData[4];
+          SETFLOAT(a_userData, user.getId());
+          SETFLOAT(a_userData+1, x/m_pixBlock.image.xsize);
+          SETFLOAT(a_userData+2, y/m_pixBlock.image.ysize);
+          SETFLOAT(a_userData+3, (z-depthMin)/(depthMax-depthMin));
+          outlet_anything(m_dataout, gensym("right_hand"), 4, a_userData);
+        }
+      }
+    }
   }
 }
 
@@ -545,4 +653,42 @@ void pix_openni :: stopRendering(){
 }
 
 void DepthChannel :: stopRendering(){
+}
+
+void pix_openni :: updateUserState(const nite::UserData& user, unsigned long long ts)
+{
+  if (user.isNew())
+    USER_MESSAGE("New")
+  else if (user.isVisible() && !m_visibleUsers[user.getId()])
+    USER_MESSAGE("Visible")
+  else if (!user.isVisible() && m_visibleUsers[user.getId()])
+    USER_MESSAGE("Out of Scene")
+  else if (user.isLost())
+    USER_MESSAGE("Lost")
+
+  m_visibleUsers[user.getId()] = user.isVisible();
+
+
+  if(m_skeletonStates[user.getId()] != user.getSkeleton().getState())
+  {
+    switch(m_skeletonStates[user.getId()] = user.getSkeleton().getState())
+    {
+    case nite::SKELETON_NONE:
+      USER_MESSAGE("Stopped tracking.")
+      break;
+    case nite::SKELETON_CALIBRATING:
+      USER_MESSAGE("Calibrating...")
+      break;
+    case nite::SKELETON_TRACKED:
+      USER_MESSAGE("Tracking!")
+      break;
+    case nite::SKELETON_CALIBRATION_ERROR_NOT_IN_POSE:
+    case nite::SKELETON_CALIBRATION_ERROR_HANDS:
+    case nite::SKELETON_CALIBRATION_ERROR_LEGS:
+    case nite::SKELETON_CALIBRATION_ERROR_HEAD:
+    case nite::SKELETON_CALIBRATION_ERROR_TORSO:
+      USER_MESSAGE("Calibration Failed... :-|")
+      break;
+    }
+  }
 }

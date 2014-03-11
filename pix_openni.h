@@ -43,12 +43,18 @@ LOG
 #include <iomanip>
 
 #include <OpenNI.h>
+#include <NiTE.h>
 
 #include "Base/GemBase.h"
 #include "Gem/Exception.h"
 #include "Gem/State.h"
 #include "Base/GemPixObj.h"
 #include "RTE/MessageCallbacks.h"
+
+#define MAX_USERS 32
+
+#define USER_MESSAGE(msg) \
+	{printf("[%08llu] User #%d:\t%s\n",ts, user.getId(),msg);}
 
 using namespace openni;
 /*-----------------------------------------------------------------
@@ -84,6 +90,7 @@ public:
   const char *m_deviceURI;
   
   bool m_rgb, m_ir, m_depth;
+  t_float m_confidenceThreshold;
   
   FrameListener *m_frameListener;
   VideoFrameRef m_videoFrameRef;
@@ -95,6 +102,13 @@ public:
   PixelFormat m_pixelFormat;
   
   DepthChannel *m_depthChannel;
+  
+  nite::UserTracker m_userTracker;
+  
+  bool m_visibleUsers[MAX_USERS];
+  nite::SkeletonState m_skeletonStates[MAX_USERS];
+  nite::UserTrackerFrameRef m_userTrackerFrame;
+
   
 protected:
 
@@ -117,7 +131,8 @@ protected:
 private:
 
   static void gem_depthMessCallback(void *data, t_symbol *s, int argc, t_atom *argv);
-
+  void updateUserState(const nite::UserData& user, unsigned long long ts);
+  
   t_outlet  *m_depthoutlet;
   t_outlet  *m_dataout;
 }; 
