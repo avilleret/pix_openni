@@ -1,6 +1,6 @@
 # change to your local directories!
-OPENNI_DIR=~/kinect/version_2/OpenNI-Linux-x64-2.2
-NITE_DIR=~/kinect/version_2/NiTE-Linux-x64-2.2
+OPENNI_DIR=$(HOME)/kinect/version_2/OpenNI-Linux-x64-2.2
+NITE_DIR=$(HOME)/kinect/version_2/NiTE-Linux-x64-2.2
 
 
 #linux doesnt work yet
