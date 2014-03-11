@@ -34,8 +34,8 @@ LOG
 *                                                                            *
 *****************************************************************************/
 
-#ifndef INCLUDE_pix_openni_H_
-#define INCLUDE_pix_openni_H_
+#ifndef INCLUDE_pix_openni2_H_
+#define INCLUDE_pix_openni2_H_
 
 
 
@@ -60,7 +60,7 @@ using namespace openni;
 /*-----------------------------------------------------------------
 -------------------------------------------------------------------
 CLASS
-    pix_openni
+    pix_openni2
     
 
 KEYWORDS
@@ -75,21 +75,25 @@ class FrameListener;
 class DepthChannel;
 
 #ifdef _WIN32
-class GEM_EXPORT pix_openni : public GemBase
+class GEM_EXPORT pix_openni2 : public GemBase
 #else
-class GEM_EXTERN pix_openni : public GemBase
+class GEM_EXTERN pix_openni2 : public GemBase, 						
+							   public OpenNI::DeviceConnectedListener,
+							   public OpenNI::DeviceDisconnectedListener,
+							   public OpenNI::DeviceStateChangedListener
 #endif
 {
-  CPPEXTERN_HEADER(pix_openni, GemBase);
+  CPPEXTERN_HEADER(pix_openni2, GemBase);
 
 public:
 
- 	pix_openni(int argc, t_atom *argv);
+  pix_openni2(int argc, t_atom *argv);
   
   Device m_device;
-  const char *m_deviceURI;
+  const char *m_deviceURIptr;
+  char m_deviceURI[1024];
   
-  bool m_rgb, m_ir, m_depth;
+  bool m_rgb, m_ir, m_depth, m_connected;
   t_float m_confidenceThreshold;
   
   FrameListener *m_frameListener;
@@ -112,11 +116,15 @@ public:
   
 protected:
 
-  virtual ~pix_openni();
+  virtual ~pix_openni2();
 
   virtual void  startRendering();
   virtual void  stopRendering();
   virtual void  render(GemState *state);
+  
+  virtual void onDeviceStateChanged(const DeviceInfo* pInfo, DeviceState state);
+  virtual void onDeviceConnected(const DeviceInfo* pInfo);
+  virtual void onDeviceDisconnected(const DeviceInfo* pInfo);
   
   void  enumerateMess();
   void  openMess(t_symbol *s,int argc, t_atom*argv);
@@ -145,9 +153,9 @@ public:
   DepthChannel();
   ~DepthChannel();
   
-  virtual void	startRendering();
-  virtual void  stopRendering();
-  virtual void 	render(GemState *state);
+  virtual void startRendering();
+  virtual void stopRendering();
+  virtual void render(GemState *state);
   
   Device *m_devicePt;
   bool *m_depthPt;

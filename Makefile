@@ -1,8 +1,6 @@
 # change to your local directories!
-PD_APP_DIR =  /home/antoine/pd/pd
-GEM_DIR = /home/antoine/pd/Gem
-OPENNI_DIR=/home/antoine/kinect/version_2/OpenNI-Linux-x64-2.2
-NITE_DIR=/home/antoine/kinect/version_2/NiTE-Linux-x64-2.2
+OPENNI_DIR=~/kinect/version_2/OpenNI-Linux-x64-2.2
+NITE_DIR=~/kinect/version_2/NiTE-Linux-x64-2.2
 
 
 #linux doesnt work yet
@@ -10,8 +8,8 @@ UNAME := $(shell uname -s)
 ifeq ($(UNAME),Linux)
  CPPFLAGS = `pkg-config --cflags pd` `pkg-config --cflags Gem` -I$(OPENNI_DIR)/Include -I$(NITE_DIR)/Include
  CXXFLAGS = -g -O2 -fPIC -freg-struct-return -Os -falign-loops=32 -falign-functions=32 -falign-jumps=32 -funroll-loops -ffast-math -mmmx
- LDFLAGS = -shared -rdynamic -Wl
- LIBS = -lOpenNI2 -lNiTE2
+ LDFLAGS = -shared -rdynamic -Wl,-rpath,"\$$ORIGIN",--enable-new-dtags
+ LIBS = -lOpenNI2 -L. -lNiTE2
  EXTENSION = pd_linux
  USER_EXTERNALS=$(HOME)/pd-externals
 endif
@@ -27,7 +25,7 @@ endif
 
 .SUFFIXES = $(EXTENSION)
 
-SOURCES = pix_openni
+SOURCES = pix_openni2
 
 all:
 	g++ $(CPPFLAGS) $(CXXFLAGS) -o $(SOURCES).o -c $(SOURCES).cc
