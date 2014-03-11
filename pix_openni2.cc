@@ -131,14 +131,14 @@ void pix_openni2 :: obj_setupCallback(t_class *classPtr)
    }
    rc = nite::NiTE::initialize();
   if ( rc != STATUS_OK ){
-    error("can't initialized NiTE : %s", OpenNI::getExtendedError());
+    printf("can't initialized NiTE : %s", OpenNI::getExtendedError());
 #ifdef __linux__
-    error("this often happens when drivers are not reachable (in /usr/lib or near this external)");
+    printf("this often happens when drivers are not reachable (in /usr/lib or near this external)");
 #endif
     throw(GemException("NiTE initialization failed\n"));
   } else {  
     nite::Version version = nite::NiTE::getVersion();
-    post("NiTE version %d.%d-%d initialized\n", version.major, version.minor, version.maintenance);
+    printf("NiTE version %d.%d-%d initialized\n", version.major, version.minor, version.maintenance);
   }
    
 }
