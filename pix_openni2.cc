@@ -53,6 +53,16 @@ public:
   unsigned int m_newFrame;
 };
 
+void shutdown_openni(){
+  printf("shutdown OpenNI2 before exiting\n");
+  OpenNI::shutdown();
+}
+
+void shutdown_nite(){
+  printf("shutdown NiTE before exiting\n");
+  nite::NiTE::shutdown();
+}
+
 CPPEXTERN_NEW(DepthChannel);
 
 DepthChannel :: DepthChannel(){
@@ -93,6 +103,7 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURIptr(ANY_DEVICE),
   OpenNI::addDeviceConnectedListener(this);
   OpenNI::addDeviceDisconnectedListener(this);
   OpenNI::addDeviceStateChangedListener(this);
+  
 }
 
 // Destructor
@@ -100,8 +111,6 @@ pix_openni2 :: ~pix_openni2(){
   closeMess();
   delete(m_frameListener);
   delete(m_depthChannel);
-  //~ OpenNI::shutdown();
-  //~ nite::NiTE::shutdown();
 }
 
 void pix_openni2 :: obj_setupCallback(t_class *classPtr)
@@ -125,20 +134,23 @@ void pix_openni2 :: obj_setupCallback(t_class *classPtr)
    if ( rc != STATUS_OK ){
       printf("can't initialized OpenNI : %s\n", OpenNI::getExtendedError());
 #ifdef __linux__
-      printf("this often happens when drivers are not reachable (in /usr/lib or near this external)\n");
+      printf("this often happens when drivers are not reachable (you can simply put them near this external)\n");
 #endif
       throw(GemException("OpenNI Init() failed\n"));
+   } else {
+    atexit(shutdown_openni);
    }
    rc = nite::NiTE::initialize();
   if ( rc != STATUS_OK ){
     printf("can't initialized NiTE : %s", OpenNI::getExtendedError());
 #ifdef __linux__
-    printf("this often happens when drivers are not reachable (in /usr/lib or near this external)");
+    printf("this often happens when drivers are not reachable (you can simply put them near this external)");
 #endif
     throw(GemException("NiTE initialization failed\n"));
   } else {  
     nite::Version version = nite::NiTE::getVersion();
     printf("NiTE version %d.%d-%d initialized\n", version.major, version.minor, version.maintenance);
+    atexit(shutdown_nite);
   }
    
 }
