@@ -745,8 +745,11 @@ void pix_openni2 :: onDeviceDisconnected(const DeviceInfo* pInfo)
   printf("Device \"%s\" disconnected\n", uri);
   printf("m_deviceURI : %s\n", m_deviceURI);
   if ( strcmp(uri,m_deviceURI)==0 ){
-	printf("call close device\n");
-	m_connected = false;
+    printf("call close device\n");
+    m_connected = false;
+    t_atom a_status;
+    SETFLOAT(&a_status,-1);
+    outlet_anything(m_dataout, gensym("open"), 1, &a_status);
   }
 }
 
