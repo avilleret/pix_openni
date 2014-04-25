@@ -372,7 +372,10 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
         if (m_device.isValid()) closeMess();
         rc=m_device.open(m_deviceURIptr);
         if( rc != STATUS_OK ){
-		  error("can't open device %s", m_deviceURI);
+          error("can't open device %s", m_deviceURI);
+          t_atom a_status;
+          SETFLOAT(&a_status,-1);
+          outlet_anything(m_dataout, gensym("open"), 1, &a_status);
         } else {
           verbose(4, "device with serial %s is open", a_serial);
           m_connected=true;
@@ -384,7 +387,12 @@ void pix_openni2 :: openBySerialMess(t_symbol *s,int argc, t_atom*argv){
       }
     }
   }
-  if (i==deviceList.getSize()) error("can't find device with serial %s", a_serial);
+  if (i==deviceList.getSize()) {
+    error("can't find device with serial %s", a_serial);
+    t_atom a_status;
+    SETFLOAT(&a_status,-1);
+    outlet_anything(m_dataout, gensym("open"), 1, &a_status);
+  }
 }
 
 // Close the device/file
