@@ -77,10 +77,10 @@ class DepthChannel;
 #ifdef _WIN32
 class GEM_EXPORT pix_openni2 : public GemBase
 #else
-class GEM_EXTERN pix_openni2 : public GemBase, 						
-							   public OpenNI::DeviceConnectedListener,
-							   public OpenNI::DeviceDisconnectedListener,
-							   public OpenNI::DeviceStateChangedListener
+class GEM_EXTERN pix_openni2 : public GemBase						
+							   //~ public OpenNI::DeviceConnectedListener,
+							   //~ public OpenNI::DeviceDisconnectedListener,
+							   //~ public OpenNI::DeviceStateChangedListener
 #endif
 {
   CPPEXTERN_HEADER(pix_openni2, GemBase);
@@ -121,11 +121,11 @@ protected:
   virtual void  startRendering();
   virtual void  stopRendering();
   virtual void  render(GemState *state);
-  
+  /*
   virtual void onDeviceStateChanged(const DeviceInfo* pInfo, DeviceState state);
   virtual void onDeviceConnected(const DeviceInfo* pInfo);
   virtual void onDeviceDisconnected(const DeviceInfo* pInfo);
-  
+  */
   void  enumerateMess();
   void  openMess(t_symbol *s,int argc, t_atom*argv);
   void  openBySerialMess(t_symbol *s,int argc, t_atom*argv);

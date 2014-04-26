@@ -100,9 +100,9 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURIptr(ANY_DEVICE),
     m_skeletonStates[i] = nite::SKELETON_NONE;
   }
 
-  OpenNI::addDeviceConnectedListener(this);
-  OpenNI::addDeviceDisconnectedListener(this);
-  OpenNI::addDeviceStateChangedListener(this);
+  //~ OpenNI::addDeviceConnectedListener(this);
+  //~ OpenNI::addDeviceDisconnectedListener(this);
+  //~ OpenNI::addDeviceStateChangedListener(this);
   
 }
 
@@ -728,7 +728,7 @@ void pix_openni2 :: stopRendering(){
 
 void DepthChannel :: stopRendering(){
 }
-
+/*
 void pix_openni2 :: onDeviceStateChanged(const DeviceInfo* pInfo, DeviceState state) 
 {
   printf("Device \"%s\" error state changed to %d\n", pInfo->getUri(), state);
@@ -752,6 +752,7 @@ void pix_openni2 :: onDeviceDisconnected(const DeviceInfo* pInfo)
     outlet_anything(m_dataout, gensym("open"), 1, &a_status);
   }
 }
+*/
 
 void pix_openni2 :: updateUserState(const nite::UserData& user, unsigned long long ts)
 {
