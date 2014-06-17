@@ -60,7 +60,7 @@ void shutdown_openni(){
 
 void shutdown_nite(){
   printf("shutdown NiTE before exiting\n");
-  nite::NiTE::shutdown();
+  //~nite::NiTE::shutdown();
 }
 
 CPPEXTERN_NEW(DepthChannel);
@@ -97,7 +97,7 @@ pix_openni2 :: pix_openni2(int argc, t_atom *argv) : m_deviceURIptr(ANY_DEVICE),
 
   for ( int i=0;i<MAX_USERS;i++){
     m_visibleUsers[i]= false;
-    m_skeletonStates[i] = nite::SKELETON_NONE;
+    //~m_skeletonStates[i] = nite::SKELETON_NONE;
   }
 
   //~ OpenNI::addDeviceConnectedListener(this);
@@ -140,6 +140,7 @@ void pix_openni2 :: obj_setupCallback(t_class *classPtr)
    } else {
     atexit(shutdown_openni);
    }
+   /*
    rc = nite::NiTE::initialize();
   if ( rc != STATUS_OK ){
     printf("can't initialized NiTE : %s", OpenNI::getExtendedError());
@@ -152,6 +153,7 @@ void pix_openni2 :: obj_setupCallback(t_class *classPtr)
     printf("NiTE version %d.%d-%d initialized\n", version.major, version.minor, version.maintenance);
     atexit(shutdown_nite);
   }
+  */
    
 }
 
@@ -464,6 +466,7 @@ void pix_openni2 :: render(GemState *state){
       return;
     }
     
+    /*
     if ( !m_userTracker.isValid() ){
       Status niteRc;
       niteRc = m_userTracker.create();
@@ -474,6 +477,7 @@ void pix_openni2 :: render(GemState *state){
         post("user tracker created !!");
       }
     }
+    */
 	
 	rc = m_videoStream.start();
     if ( rc != STATUS_OK ){
@@ -550,7 +554,7 @@ void pix_openni2 :: render(GemState *state){
     state->set(GemState::_PIX, &m_pixBlock);
   }
   
-  
+  /*
   if ( m_userTracker.isValid()) {
     // get user tracking data
     Status niteRc = m_userTracker.readFrame(&m_userTrackerFrame);
@@ -624,6 +628,7 @@ void pix_openni2 :: render(GemState *state){
       }
     }
   }
+  */
 }
 
 
@@ -754,6 +759,7 @@ void pix_openni2 :: onDeviceDisconnected(const DeviceInfo* pInfo)
 }
 */
 
+/*
 void pix_openni2 :: updateUserState(const nite::UserData& user, unsigned long long ts)
 {
   if (user.isNew())
@@ -791,3 +797,4 @@ void pix_openni2 :: updateUserState(const nite::UserData& user, unsigned long lo
     }
   }
 }
+*/

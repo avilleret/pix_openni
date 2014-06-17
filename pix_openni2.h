@@ -43,7 +43,7 @@ LOG
 #include <iomanip>
 
 #include <OpenNI.h>
-#include <NiTE.h>
+//~#include <NiTE.h>
 
 #include "Base/GemBase.h"
 #include "Gem/Exception.h"
@@ -107,11 +107,11 @@ public:
   
   DepthChannel *m_depthChannel;
   
-  nite::UserTracker m_userTracker;
+  //~nite::UserTracker m_userTracker;
   
   bool m_visibleUsers[MAX_USERS];
-  nite::SkeletonState m_skeletonStates[MAX_USERS];
-  nite::UserTrackerFrameRef m_userTrackerFrame;
+  //~nite::SkeletonState m_skeletonStates[MAX_USERS];
+  //~nite::UserTrackerFrameRef m_userTrackerFrame;
 
   
 protected:
@@ -139,7 +139,7 @@ protected:
 private:
 
   static void gem_depthMessCallback(void *data, t_symbol *s, int argc, t_atom *argv);
-  void updateUserState(const nite::UserData& user, unsigned long long ts);
+  //~void updateUserState(const nite::UserData& user, unsigned long long ts);
   
   t_outlet  *m_depthoutlet;
   t_outlet  *m_dataout;
